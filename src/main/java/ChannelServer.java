@@ -4,9 +4,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.*;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -38,7 +36,7 @@ public class ChannelServer {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new HttpServerCodec());
+                pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(new HttpObjectAggregator(64*1024));
                 pipeline.addLast(new SoutChannelInboundHandler());
             }
@@ -61,7 +59,17 @@ public class ChannelServer {
                 System.out.println(new String(buffer));
             }else if(m instanceof FullHttpRequest){
                 System.out.println(m.toString());
-                eventLoopGroup.execute();
+                String content="Hello";
+                String msgHeader="HTTP/1.1 200 OK\r\n" +
+                        "Content-Length: "+content.getBytes("UTF-8").length+"\r\n" +
+                        "Content-Type: text/html;charset=UTF-8\r\n" +
+                        "\r\n";
+                if (((FullHttpRequest) m).method().equals(HttpMethod.CONNECT)) {
+                    ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
+                }else{
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(msgHeader+content, Charset.forName("utf-8")));
+
+                }
             }
         }
     }
