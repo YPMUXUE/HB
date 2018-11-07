@@ -39,6 +39,9 @@
       <find>string</find>
     </findStrings>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
@@ -242,6 +245,7 @@
       </profile-state>
     </entry>
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
@@ -415,16 +419,15 @@
       <workItem from="1541138310048" duration="8840000" />
       <workItem from="1541152604463" duration="778000" />
       <workItem from="1541211220142" duration="14132000" />
-      <workItem from="1541551848436" duration="7981000" />
+      <workItem from="1541551848436" duration="8182000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="31731000" />
+    <option name="totallyTimeSpent" value="31932000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1382" height="722" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info anchor="right" id="Palette" order="3" />
       <window_info anchor="bottom" id="FindBugs-IDEA" order="12" />
@@ -445,10 +448,10 @@
       <window_info anchor="right" id="Palette&#9;" order="7" />
       <window_info id="Image Layers" order="4" />
       <window_info anchor="right" id="Capture Analysis" order="4" />
-      <window_info anchor="bottom" id="Version Control" order="16" show_stripe_button="false" weight="0.4375" />
+      <window_info anchor="bottom" id="Version Control" order="16" weight="0.4375" />
       <window_info anchor="bottom" id="Run" order="6" weight="0.29715303" />
       <window_info anchor="bottom" id="Terminal" order="11" sideWeight="0.49924356" weight="0.32740214" />
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4923077" weight="0.25869894" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.4923077" visible="true" weight="0.25869894" />
       <window_info anchor="bottom" id="Run with VisualVM" order="0" />
       <window_info id="JRebel" order="3" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="5" weight="0.32740214" />
