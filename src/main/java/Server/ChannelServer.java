@@ -1,3 +1,6 @@
+package Server;
+
+import Server.handler.HttpProxyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -10,7 +13,8 @@ import java.net.InetAddress;
 import java.nio.charset.Charset;
 
 public class ChannelServer {
-    protected static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+    public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
+    public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     protected Channel serverChannel;
 
@@ -38,15 +42,13 @@ public class ChannelServer {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(new HttpObjectAggregator(64*1024));
-                pipeline.addLast(new SoutChannelInboundHandler());
+                pipeline.addLast(new HttpProxyHandler());
             }
         });
         channelServer.serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");
             eventLoopGroup.shutdownGracefully();
         });
-
-
     }
 
     public static class SoutChannelInboundHandler extends SimpleChannelInboundHandler {
