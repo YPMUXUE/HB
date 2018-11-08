@@ -42,7 +42,7 @@ public class ChannelServer {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(new HttpObjectAggregator(64*1024));
-                pipeline.addLast(new SoutChannelInboundHandler());
+                pipeline.addLast(new HttpProxyHandler());
             }
         });
         channelServer.serverChannel.closeFuture().addListener((f) -> {
