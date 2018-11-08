@@ -42,7 +42,7 @@ public class ChannelServer {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(new HttpObjectAggregator(64*1024));
-                pipeline.addLast(new HttpProxyHandler());
+                pipeline.addLast(new SoutChannelInboundHandler());
             }
         });
         channelServer.serverChannel.closeFuture().addListener((f) -> {
@@ -59,19 +59,19 @@ public class ChannelServer {
                 byte[] buffer = new byte[msg.readableBytes()];
                 msg.readBytes(buffer);
                 System.out.println(new String(buffer));
-            }else if(m instanceof FullHttpRequest){
+            }else{
                 System.out.println(m.toString());
-                String content="Hello";
-                String msgHeader="HTTP/1.1 200 OK\r\n" +
-                        "Content-Length: "+content.getBytes("UTF-8").length+"\r\n" +
-                        "Content-Type: text/html;charset=UTF-8\r\n" +
-                        "\r\n";
-                if (((FullHttpRequest) m).method().equals(HttpMethod.CONNECT)) {
-                    ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
-                }else{
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(msgHeader+content, Charset.forName("utf-8")));
-
-                }
+//                String content="Hello";
+//                String msgHeader="HTTP/1.1 200 OK\r\n" +
+//                        "Content-Length: "+content.getBytes("UTF-8").length+"\r\n" +
+//                        "Content-Type: text/html;charset=UTF-8\r\n" +
+//                        "\r\n";
+//                if (((FullHttpRequest) m).method().equals(HttpMethod.CONNECT)) {
+//                    ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
+//                }else{
+//                    ctx.writeAndFlush(Unpooled.copiedBuffer(msgHeader+content, Charset.forName("utf-8")));
+//
+//                }
             }
         }
     }

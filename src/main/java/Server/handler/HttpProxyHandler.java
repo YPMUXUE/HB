@@ -21,6 +21,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
         if (HttpMethod.CONNECT.equals(msg.method())){
             connectRequest(ctx,msg);
         }else{
+            System.out.println(msg.toString());
             future.channel().writeAndFlush(msg.retain());
         }
     }
