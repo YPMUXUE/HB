@@ -1,5 +1,7 @@
-package Server.handler;
+package Client.handler;
 
+import Client.bean.HostAndPort;
+import Client.util.RequestResolveUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -10,43 +12,33 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 
 public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final static ByteBuf CONNECT_RESPONSE_OK = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
-    private ChannelFuture clientFuture;
+
+    public HttpProxyHandler() {
+    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
         if (HttpMethod.CONNECT.equals(msg.method())) {
-            this.clientFuture = connectRequest(ctx, msg);
+            ChannelFuture channelFuture = connectRequest(ctx, msg);
             String hostName = msg.uri();
-            clientFuture.addListener((f) -> {
+            channelFuture.addListener((f) -> {
                 if (f.isSuccess()) {
                     System.out.println(hostName + "connect success");
-                    ctx.writeAndFlush(CONNECT_RESPONSE_OK);
+                    ctx.pipeline().remove("HttpProxyHandler").handlerRemoved(ctx);
+                    ctx.pipeline().addLast("ConnectMethodHandler",new ConnectMethodHandler(channelFuture.channel()));
+                    ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
                 } else {
                     System.out.println(hostName + "connect failed");
-                    ctx.close();
+                    ctx.channel().close();
                 }
             });
         } else {
-            if (this.clientFuture == null) {
-                //todo future为null说明之前没有发送过CONNECT请求，可能是个普通HTTP或proxy-Connection请求
-                ctx.close();
-            } else {
-                if(this.clientFuture.isDone()) {
-                    this.clientFuture.channel().writeAndFlush(msg.retain());
-                }else{
-                    this.clientFuture.addListener((f)->{
-                        if (f.isSuccess()){
-                            clientFuture.channel().write(msg);
-                        }else{
 
-                        }
-                    })
-                }
-            }
         }
     }
 
@@ -64,10 +56,8 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }).addLast(new HttpRequestEncoder());
             }
         });
-        String uri = msg.uri();
-        String host = uri.substring(0, uri.lastIndexOf(":"));
-        int port = Integer.valueOf(uri.substring(uri.lastIndexOf(":") + 1, uri.length()));
-        ChannelFuture future = bootstrap.connect(InetAddress.getByName(host), port);
+        HostAndPort hostAndPort=RequestResolveUtil.resolveRequest(msg);
+        ChannelFuture future = bootstrap.connect(hostAndPort.getHost(), hostAndPort.getPort());
         return future;
     }
 }

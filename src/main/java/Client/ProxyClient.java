@@ -1,24 +1,22 @@
-package Server;
+package Client;
 
-import Server.handler.HttpProxyHandler;
+import Client.handler.HttpProxyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.*;
 
 import java.net.InetAddress;
-import java.nio.charset.Charset;
 
-public class ChannelServer {
+public class ProxyClient {
     public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
     public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     protected Channel serverChannel;
 
-    public ChannelServer(String host, int port, ChannelInitializer channelInitializer) throws Exception {
+    public ProxyClient(String host, int port, ChannelInitializer channelInitializer) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
@@ -36,16 +34,16 @@ public class ChannelServer {
     }
 
     public static void main(String[] args) throws Exception {
-        ChannelServer channelServer=new ChannelServer("localhost", 9001, new ChannelInitializer<Channel>() {
+        ProxyClient proxyClient=new ProxyClient("localhost", 9001, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new HttpRequestDecoder());
-                pipeline.addLast(new HttpObjectAggregator(64*1024));
-                pipeline.addLast(new HttpProxyHandler());
+                pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
+                pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
+                pipeline.addLast("HttpProxyHandler",new HttpProxyHandler());
             }
         });
-        channelServer.serverChannel.closeFuture().addListener((f) -> {
+        proxyClient.serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");
             eventLoopGroup.shutdownGracefully();
         });
