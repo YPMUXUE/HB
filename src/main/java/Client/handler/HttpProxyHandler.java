@@ -11,8 +11,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 
 public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -45,7 +43,8 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
     private ChannelFuture connectRequest(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(ctx.channel().eventLoop())
-                .channel(NioSocketChannel.class).handler(new ChannelInitializer<Channel>() {
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {

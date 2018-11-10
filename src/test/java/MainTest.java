@@ -1,7 +1,6 @@
-import Client.bean.HostAndPort;
-
 public class MainTest {
     public static void main(String[] args) {
+        te.valueOf("http");
         String uri="bbs.nga.cn";
         String hostAndPort;
 //        if (uri == null || "/".equals(uri) || "".equals(uri)){
