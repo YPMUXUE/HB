@@ -24,7 +24,17 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
         LogUtil.debug(msg::toString);
         if (HttpMethod.CONNECT.equals(msg.method())) {
-            ChannelFuture clientToServerChannelFuture = connectRequest(ctx, msg, new ForwardToServerHandler(ctx.channel()));
+            ChannelFuture clientToServerChannelFuture = connectRequest(ctx, msg, new ChannelInitializer() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+                        @Override
+                        protected void channelRead0(ChannelHandlerContext c, ByteBuf msg) {
+                            ctx.channel().writeAndFlush(msg.retain());
+                        }
+                    }).addLast("ExceptionHandler",new ExceptionLoggerHandler("ClientToServer"));
+                }
+            });
             String hostName = msg.uri();
             clientToServerChannelFuture.addListener((f) -> {
                 if (f.isSuccess()) {
