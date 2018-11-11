@@ -34,7 +34,7 @@ public class RequestResolveUtil {
             port=hostAndPort.substring(hostAndPort.lastIndexOf(":")+1);
         }else{
             host=hostAndPort;
-            if ("https://".startsWith(uri)){
+            if (uri.startsWith("http://")){
                 port="80";
             }else {
                 port="443";

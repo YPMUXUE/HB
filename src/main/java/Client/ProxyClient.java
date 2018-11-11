@@ -7,8 +7,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import java.net.InetAddress;
+import java.util.concurrent.TimeUnit;
 
 public class ProxyClient {
     public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
@@ -41,6 +43,7 @@ public class ProxyClient {
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
                 pipeline.addLast("HttpProxyHandler",new HttpProxyHandler());
+                pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15,TimeUnit.SECONDS));
             }
         });
         proxyClient.serverChannel.closeFuture().addListener((f) -> {

@@ -1,26 +1,14 @@
+import Client.bean.HostAndPort;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
+
 public class MainTest {
     public static void main(String[] args) {
-        te.valueOf("http");
-        String uri="bbs.nga.cn";
-        String hostAndPort;
-//        if (uri == null || "/".equals(uri) || "".equals(uri)){
-//            hostAndPort=req.headers().get("Host");
-//        }else{
-            hostAndPort=uri;
-            if (hostAndPort.startsWith("http://")){
-                hostAndPort=uri.substring("http://".length());
-            }
-            if (hostAndPort.contains("/")){
-                hostAndPort=hostAndPort.substring(0,hostAndPort.indexOf("/"));
-            }
-//        }
-        String port,host;
-        if (hostAndPort.contains(":")){
-            host=hostAndPort.substring(0,hostAndPort.lastIndexOf(":"));
-            port=hostAndPort.substring(hostAndPort.lastIndexOf(":")+1);
-        }else{
-            host=hostAndPort;
-            port="80";
-        }
+        DefaultFullHttpRequest defaultFullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+//        defaultFullHttpRequest.headers().add("Host","www.baidu.com:443");
+        HostAndPort.resolve(defaultFullHttpRequest);
+        System.out.println("...");
     }
 }
