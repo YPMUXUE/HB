@@ -1,22 +1,21 @@
 package Client.handler;
 
 import io.netty.channel.*;
-import io.netty.util.ReferenceCountUtil;
 
 public class ConnectMethodHandler extends ChannelDuplexHandler {
-    private final Channel clientChannel;
+    private final Channel clientToServerChannel;
     public ConnectMethodHandler(Channel channel) {
-        this.clientChannel =channel;
+        this.clientToServerChannel =channel;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        clientChannel.writeAndFlush(msg);
+        clientToServerChannel.writeAndFlush(msg);
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        clientChannel.close();
+        clientToServerChannel.close();
         super.close(ctx, promise);
     }
 }
