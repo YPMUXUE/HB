@@ -23,8 +23,9 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
         LogUtil.debug(msg::toString);
+        ChannelFuture clientToServerChannelFuture;
         if (HttpMethod.CONNECT.equals(msg.method())) {
-            ChannelFuture clientToServerChannelFuture = connectRequest(ctx, msg, new ChannelInitializer() {
+            clientToServerChannelFuture = connectRequest(ctx, msg, new ChannelInitializer() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
@@ -51,24 +52,14 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
             });
         } else {
-            System.out.println(ctx.channel().toString());
-            ChannelFuture clientToServerChannelFuture = connectRequest(ctx, msg, new ChannelInitializer() {
-                @Override
-                protected void initChannel(Channel ch) throws Exception {
-
-                }
-            });
-            String hostName = msg.uri();
-            clientToServerChannelFuture.addListener((f)->{
-                if (f.isSuccess()){
-                    LogUtil.info(()->(hostName + " connect success"));
-
-                }else{
-                    LogUtil.info(()->hostName+" connect failed");
-                }
-            });
+            System.out.println(msg);
+            ctx.channel().close();
+            return;
 
         }
+        ctx.channel().closeFuture().addListener((f)->{
+            clientToServerChannelFuture.channel().close();
+        });
     }
 
 
