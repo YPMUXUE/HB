@@ -52,10 +52,9 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
             });
         } else {
-            System.out.println(msg);
-            ctx.channel().close();
+            LogUtil.debug(msg::toString);
+            ctx.fireChannelRead(msg);
             return;
-
         }
         ctx.channel().closeFuture().addListener((f)->{
             clientToServerChannelFuture.channel().close();
