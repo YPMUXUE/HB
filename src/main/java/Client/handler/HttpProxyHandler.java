@@ -2,6 +2,7 @@ package Client.handler;
 
 import Client.bean.HostAndPort;
 import Client.log.LogUtil;
+import Client.util.ConnectionUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -25,7 +26,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
         LogUtil.debug(msg::toString);
         ChannelFuture clientToServerChannelFuture;
         if (HttpMethod.CONNECT.equals(msg.method())) {
-            clientToServerChannelFuture = connectRequest(ctx, msg, new ChannelInitializer() {
+            clientToServerChannelFuture = ConnectionUtil.newConnectionToServer(ctx, msg, new ChannelInitializer() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
@@ -52,7 +53,6 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
             });
         } else {
-            LogUtil.debug(msg::toString);
             ctx.fireChannelRead(msg);
             return;
         }
@@ -61,14 +61,4 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
         });
     }
 
-
-    private ChannelFuture connectRequest(ChannelHandlerContext ctx, FullHttpRequest msg, ChannelInitializer initializer) throws Exception {
-        Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(ctx.channel().eventLoop())
-                .channel(NioSocketChannel.class)
-                .handler(initializer);
-        HostAndPort hostAndPort=HostAndPort.resolve(msg);
-        ChannelFuture future = bootstrap.connect(hostAndPort.getHost(), hostAndPort.getPort());
-        return future;
-    }
 }
