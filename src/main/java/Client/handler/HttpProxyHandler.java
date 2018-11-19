@@ -1,13 +1,15 @@
 package Client.handler;
 
 import Client.log.LogUtil;
-import Client.util.ConnectionUtil;
+import Client.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +28,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         LogUtil.debug(msg::toString);
         ChannelFuture clientToServerChannelFuture;
-            clientToServerChannelFuture = ConnectionUtil.newConnectionToServer(ctx, msg, new ChannelInitializer() {
+            clientToServerChannelFuture = Connections.newConnectionToServer(ctx, msg, new ChannelInitializer() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     ch.pipeline().addLast(new SimpleTransferHandler(ctx.channel()))
@@ -40,7 +42,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                     //删除所有RequestToClient下ChannelHandler
                     ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                     ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
-                            .addLast("ConnectMethodHandler",new ConnectMethodHandler(clientToServerChannelFuture.channel()))
+                            .addLast("ConnectMethodHandler",new SimpleTransferHandler(clientToServerChannelFuture.channel()))
                             .addLast("ExceptionHandler",new ExceptionLoggerHandler("HttpProxyHandler"));
                     ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
                 } else {

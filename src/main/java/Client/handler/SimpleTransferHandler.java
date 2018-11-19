@@ -16,4 +16,9 @@ public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
         targetChannel.writeAndFlush(msg);
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        targetChannel.close();
+        super.channelInactive(ctx);
+    }
 }
