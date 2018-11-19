@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
-    private final Channel targetChannel;
+    protected final Channel targetChannel;
 
     public SimpleTransferHandler(Channel channel) {
         targetChannel = channel;
