@@ -1,4 +1,3 @@
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -10,6 +9,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class ServerTest {
     public static void main(String[] args) throws Exception {
@@ -43,11 +43,14 @@ public class ServerTest {
 //            byte[] buffer=new byte[msg.readableBytes()];
 //            msg.readBytes(buffer);
 //            System.out.println(new String(buffer));
-            System.out.println(ByteBufUtil.hexDump(msg));
-            ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n" +
+            System.out.println(ByteBufUtil.hexDump(msg.readBytes(6+6)));
+            System.out.println(msg.toString(StandardCharsets.UTF_8));
+            String message="HTTP/1.1 200 OK\r\n" +
                     "Content-Type: application/json; charset=utf-8\r\n" +
                     "\r\n" +
-                    "{\"isLogin\":false,\"username\":\"\",\"userId\":\"\",\"timestamp\":1542701358812}\n", Charset.forName("utf-8")));
+                    "{\"isLogin\":false,\"username\":\"\",\"userId\":\"\",\"timestamp\":1542701358812}\r\n";
+            ctx.channel().write(Unpooled.buffer().writeBytes(new byte[]{(byte)0xCA,(byte)0xFE}).writeInt(message.getBytes(StandardCharsets.UTF_8).length));
+            ctx.writeAndFlush(Unpooled.copiedBuffer(message, Charset.forName("utf-8")));
         }
     }
 }

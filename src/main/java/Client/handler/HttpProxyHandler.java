@@ -4,12 +4,12 @@ import Client.log.LogUtil;
 import Client.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +43,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                     //删除所有RequestToClient下ChannelHandler
                     ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                     ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
-                            .addLast("ConnectMethodHandler",new SimpleTransferHandler(ctx.channel()))
+                            .addLast("ConnectMethodHandler",new SimpleTransferHandler(clientToServerChannelFuture.channel()))
                             .addLast("ExceptionHandler",new ExceptionLoggerHandler("HttpProxyHandler"));
                     ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
                 } else {
