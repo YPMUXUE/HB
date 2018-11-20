@@ -6,15 +6,14 @@ import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
 import Client.handler.SimpleTransferHandler;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.util.concurrent.Future;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
+import io.netty.handler.codec.http.FullHttpRequest;
 
 public class Connections {
     public static ChannelFuture newConnectionToServer(ChannelHandlerContext ctx, FullHttpRequest msg, ChannelInitializer channelInitializer) throws Exception{
