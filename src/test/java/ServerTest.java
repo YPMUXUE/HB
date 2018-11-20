@@ -2,11 +2,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 
 public class ServerTest {
     public static void main(String[] args) throws Exception {
@@ -18,10 +21,11 @@ public class ServerTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4));
                         pipeline.addLast(new SoutChannelInboundHandler());
                     }
                 });
-        ChannelFuture future = bootstrap.bind(InetAddress.getByName("localhost"), 9001);
+        ChannelFuture future = bootstrap.bind(InetAddress.getByName("localhost"), 9002);
         Channel serverChannel=future.channel();
         serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");
@@ -36,9 +40,14 @@ public class ServerTest {
     public static class SoutChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-            byte[] buffer=new byte[msg.readableBytes()];
-            msg.readBytes(buffer);
-            System.out.println(new String(buffer));
+//            byte[] buffer=new byte[msg.readableBytes()];
+//            msg.readBytes(buffer);
+//            System.out.println(new String(buffer));
+            System.out.println(ByteBufUtil.hexDump(msg));
+            ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n" +
+                    "Content-Type: application/json; charset=utf-8\r\n" +
+                    "\r\n" +
+                    "{\"isLogin\":false,\"username\":\"\",\"userId\":\"\",\"timestamp\":1542701358812}\n", Charset.forName("utf-8")));
         }
     }
 }

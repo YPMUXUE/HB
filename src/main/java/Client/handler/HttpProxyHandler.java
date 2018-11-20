@@ -28,13 +28,14 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         LogUtil.debug(msg::toString);
         ChannelFuture clientToServerChannelFuture;
-            clientToServerChannelFuture = Connections.newConnectionToServer(ctx, msg, new ChannelInitializer() {
-                @Override
-                protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new SimpleTransferHandler(ctx.channel()))
-                            .addLast("ExceptionHandler",new ExceptionLoggerHandler("ClientToServer"));
-                }
-            });
+//            clientToServerChannelFuture = Connections.newConnectionToServer(ctx, msg, new ChannelInitializer() {
+//                @Override
+//                protected void initChannel(Channel ch) throws Exception {
+//                    ch.pipeline().addLast(new SimpleTransferHandler(ctx.channel()))
+//                            .addLast("ExceptionHandler",new ExceptionLoggerHandler("ClientToServer"));
+//                }
+//            });
+        clientToServerChannelFuture = Connections.newConnectionToProxyServer(ctx,msg,null);
             String hostName = msg.uri();
             clientToServerChannelFuture.addListener((f) -> {
                 if (f.isSuccess()) {
@@ -42,7 +43,7 @@ public class HttpProxyHandler extends SimpleChannelInboundHandler<FullHttpReques
                     //删除所有RequestToClient下ChannelHandler
                     ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                     ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
-                            .addLast("ConnectMethodHandler",new SimpleTransferHandler(clientToServerChannelFuture.channel()))
+                            .addLast("ConnectMethodHandler",new SimpleTransferHandler(ctx.channel()))
                             .addLast("ExceptionHandler",new ExceptionLoggerHandler("HttpProxyHandler"));
                     ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
                 } else {
