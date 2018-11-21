@@ -1,21 +1,52 @@
 package Client.handler;
 
-import io.netty.channel.*;
+import Client.log.LogUtil;
+import Client.util.Connections;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 
-public class ConnectMethodHandler extends ChannelDuplexHandler {
-    private final Channel clientToServerChannel;
-    public ConnectMethodHandler(Channel channel) {
-        this.clientToServerChannel =channel;
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
+
+public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+    private final static ByteBuf CONNECT_RESPONSE_OK = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
+
+    public ConnectMethodHandler() {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        clientToServerChannel.writeAndFlush(msg);
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+        if(!msgInterested(msg)){
+            ctx.fireChannelRead(msg);
+            return;
+        }
+        LogUtil.debug(msg::toString);
+        String hostName = msg.uri();
+         Connections.newConnectionToProxyServer(ctx,msg,(status,channel)->{
+            if (status == 1){
+                LogUtil.info(()->(hostName + "connect success"));
+                //删除所有RequestToClient下ChannelHandler
+                ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
+                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
+                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channel))
+                        .addLast("ExceptionHandler",new ExceptionLoggerHandler("ConnectMethodHandler"));
+                ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
+            }else{
+                LogUtil.info(()->(hostName + "connect failed"));
+                ctx.channel().close();
+            }
+        });
+
     }
 
-    @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        clientToServerChannel.close();
-        super.close(ctx, promise);
+    private boolean msgInterested(FullHttpRequest msg) {
+        return HttpMethod.CONNECT.equals(msg.method());
     }
+
 }

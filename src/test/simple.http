@@ -1,6 +1,8 @@
 GET http://bbs.nga.cn/ HTTP/1.1
 Host: www.example.com
 Proxy-Connection: keep-alive
+
+
 ************************************
 CONNECT 103.254.188.50:80 HTTP/1.1
 Host: 103.254.188.50:80

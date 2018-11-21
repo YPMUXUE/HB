@@ -11,7 +11,8 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import java.util.List;
 
 public class AddHeaderHandler extends MessageToMessageEncoder<ByteBuf> {
-    private static final byte[] header=new byte[]{(byte)0xCA,(byte)0xFE};
+    private static final byte[] heartBeat=new byte[]{(byte)0xCA,(byte)0xFE};
+    private static final byte[] header=new byte[]{(byte)0x03,(byte)0x20};
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {

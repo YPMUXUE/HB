@@ -5,10 +5,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public class AddDestinationhandler extends MessageToByteEncoder<ByteBuf> {
+public class AddDestinationHandler extends MessageToByteEncoder<ByteBuf> {
     private final byte[] des;
 
-    public AddDestinationhandler(HostAndPort hostAndPort) throws Exception {
+    public AddDestinationHandler(HostAndPort hostAndPort) throws Exception {
         byte[] host = hostAndPort.getHost().getAddress();
         int iport = hostAndPort.getPort();
         byte[] port = new byte[]{
@@ -29,7 +29,7 @@ public class AddDestinationhandler extends MessageToByteEncoder<ByteBuf> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
-        out.writeBytes(ctx.alloc().buffer(6).writeBytes(des));
+        out.writeBytes(ctx.alloc().buffer(des.length).writeBytes(des));
         out.writeBytes(msg);
     }
 }

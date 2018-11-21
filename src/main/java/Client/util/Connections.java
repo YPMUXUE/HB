@@ -1,7 +1,7 @@
 package Client.util;
 
 import Client.bean.HostAndPort;
-import Client.handler.AddDestinationhandler;
+import Client.handler.AddDestinationHandler;
 import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
 import Client.handler.SimpleTransferHandler;
@@ -10,9 +10,9 @@ import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.util.concurrent.Future;
 
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
+
 
 public class Connections {
     public static ChannelFuture newConnectionToServer(ChannelHandlerContext ctx, FullHttpRequest msg, ChannelInitializer channelInitializer) throws Exception{
@@ -24,7 +24,7 @@ public class Connections {
         ChannelFuture future = bootstrap.connect(hostAndPort.getHost(), hostAndPort.getPort());
         return future;
     }
-    public static ChannelFuture newConnectionToProxyServer(ChannelHandlerContext ctx, FullHttpRequest msg, Consumer<Future> futureConsumer){
+    public static Channel newConnectionToProxyServer(ChannelHandlerContext ctx, FullHttpRequest msg, BiConsumer<Integer,Channel> channelConsumer){
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(ctx.channel().eventLoop())
                 .channel(NioSocketChannel.class)
@@ -37,11 +37,19 @@ public class Connections {
                         //outbound
                         ch.pipeline().addLast("header",new AddHeaderHandler())
                                 .addLast("length",new AddLengthHandler())
-                                .addLast("destination", new AddDestinationhandler(HostAndPort.resolve(msg)));
+                                .addLast("destination", new AddDestinationHandler(HostAndPort.resolve(msg)));
 
                     }
                 });
         ChannelFuture future=bootstrap.connect("localhost",9002);
-        return future;
+        Channel channel=future.channel();
+        future.addListener((f)->{
+            if (f.isSuccess()){
+                channelConsumer.accept(1,channel);
+            }else{
+                channelConsumer.accept(0,channel);
+            }
+        });
+        return channel;
     }
 }
