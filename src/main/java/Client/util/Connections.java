@@ -41,7 +41,7 @@ public class Connections {
 
                     }
                 });
-        ChannelFuture future=bootstrap.connect("localhost",9002);
+        ChannelFuture future=bootstrap.connect("192.168.220.1",9002);
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
