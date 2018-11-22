@@ -28,15 +28,15 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
         }
         LogUtil.debug(msg::toString);
         String hostName = msg.uri();
-         Connections.newConnectionToProxyServer(ctx,msg,(status,channel)->{
+         Connections.newConnectionToProxyServer(ctx,msg,(status,channelToProxyServer)->{
             if (status == 1){
                 LogUtil.info(()->(hostName + "connect success"));
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
-                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channel))
+                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer))
                         .addLast("ExceptionHandler",new ExceptionLoggerHandler("ConnectMethodHandler"));
-                ctx.channel().writeAndFlush(CONNECT_RESPONSE_OK);
+                channelToProxyServer.writeAndFlush(Unpooled.EMPTY_BUFFER);
             }else{
                 LogUtil.info(()->(hostName + "connect failed"));
                 ctx.channel().close();

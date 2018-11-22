@@ -6,9 +6,16 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
     protected final Channel targetChannel;
+    private final boolean closeTargetChannel;
 
     public SimpleTransferHandler(Channel channel) {
         targetChannel = channel;
+        this.closeTargetChannel = false;
+    }
+
+    public SimpleTransferHandler(Channel targetChannel, boolean closeTargetChannel) {
+        this.targetChannel = targetChannel;
+        this.closeTargetChannel = closeTargetChannel;
     }
 
     @Override
@@ -18,7 +25,9 @@ public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        targetChannel.close();
+        if (closeTargetChannel) {
+            targetChannel.close();
+        }
         super.channelInactive(ctx);
     }
 }

@@ -20,7 +20,7 @@ public class ProxyServer {
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer);
-        ChannelFuture future = bootstrap.bind(InetAddress.getLocalHost(), port);
+        ChannelFuture future = bootstrap.bind("127.0.0.1", port);
         future.addListener(f->{
             if (f.isSuccess()){
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -44,6 +44,10 @@ public class ProxyServer {
                         .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
                         .addLast("DestinationConnectHandler",new DestinationConnectHandler());
             }
+        });
+        proxyServer.serverChannel.closeFuture().addListener((f) -> {
+            System.out.println("server stop");
+            eventLoopGroup.shutdownGracefully();
         });
 
     }

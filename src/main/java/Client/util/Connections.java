@@ -6,25 +6,41 @@ import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
 import Client.handler.SimpleTransferHandler;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 
+import java.net.SocketAddress;
 import java.util.function.BiConsumer;
 
 
 public class Connections {
-    public static ChannelFuture newConnectionToServer(ChannelHandlerContext ctx, FullHttpRequest msg, ChannelInitializer channelInitializer) throws Exception{
+    public static ChannelFuture newConnectionToServer(ChannelHandlerContext ctx, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(ctx.channel().eventLoop())
                 .channel(NioSocketChannel.class)
-                .handler(channelInitializer);
-        HostAndPort hostAndPort=HostAndPort.resolve(msg);
-        ChannelFuture future = bootstrap.connect(hostAndPort.getHost(), hostAndPort.getPort());
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                     ch.pipeline().addLast("readtimeout",new ReadTimeoutHandler(30))
+                             .addLast("transfer",new SimpleTransferHandler(ctx.channel()));
+                    }
+                });
+        ChannelFuture future = bootstrap.connect(address);
+        Channel channelToServer=future.channel();
+        future.addListener((f)->{
+            if (f.isSuccess()){
+                channelConsumer.accept(1,channelToServer);
+            }else{
+                channelConsumer.accept(0,channelToServer);
+            }
+        });
         return future;
     }
-    public static Channel newConnectionToProxyServer(ChannelHandlerContext ctx, FullHttpRequest msg, BiConsumer<Integer,Channel> channelConsumer){
+    public static ChannelFuture newConnectionToProxyServer(ChannelHandlerContext ctx, FullHttpRequest msg, BiConsumer<Integer,Channel> channelConsumer){
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(ctx.channel().eventLoop())
                 .channel(NioSocketChannel.class)
@@ -41,7 +57,7 @@ public class Connections {
 
                     }
                 });
-        ChannelFuture future=bootstrap.connect("192.168.220.1",9002);
+        ChannelFuture future=bootstrap.connect("127.0.0.1",9002);
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
@@ -50,6 +66,6 @@ public class Connections {
                 channelConsumer.accept(0,channel);
             }
         });
-        return channel;
+        return future;
     }
 }
