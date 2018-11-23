@@ -1,5 +1,6 @@
 package Client.handler;
 
+import Client.bean.HostAndPort;
 import Client.log.LogUtil;
 import Client.util.Connections;
 import io.netty.buffer.ByteBuf;
@@ -28,9 +29,10 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
         }
         LogUtil.debug(msg::toString);
         String hostName = msg.uri();
-         Connections.newConnectionToProxyServer(ctx,msg,(status,channelToProxyServer)->{
-            if (status == 1){
+         Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),HostAndPort.resolve(msg),(channelFuture, channelToProxyServer)->{
+            if (channelFuture.isSuccess()){
                 LogUtil.info(()->(hostName + "connect success"));
+
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))

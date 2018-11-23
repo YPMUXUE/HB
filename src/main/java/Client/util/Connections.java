@@ -12,6 +12,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
 import java.util.function.BiConsumer;
@@ -40,20 +41,20 @@ public class Connections {
         });
         return future;
     }
-    public static ChannelFuture newConnectionToProxyServer(ChannelHandlerContext ctx, FullHttpRequest msg, BiConsumer<Integer,Channel> channelConsumer){
+    public static ChannelFuture newConnectionToProxyServer(EventLoop eventLoop, HostAndPort destination, BiConsumer<Future,Channel> channelConsumer){
         Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(ctx.channel().eventLoop())
+        bootstrap.group(eventLoop)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         //inbound
-                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,6,true))
-                                .addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
+                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,6,true));
+//                                .addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
                         //outbound
                         ch.pipeline().addLast("header",new AddHeaderHandler())
                                 .addLast("length",new AddLengthHandler())
-                                .addLast("destination", new AddDestinationHandler(HostAndPort.resolve(msg)));
+                                .addLast("destination", new AddDestinationHandler(destination));
 
                     }
                 });
@@ -61,9 +62,9 @@ public class Connections {
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
-                channelConsumer.accept(1,channel);
+                channelConsumer.accept(f,channel);
             }else{
-                channelConsumer.accept(0,channel);
+                channelConsumer.accept(f,null);
             }
         });
         return future;

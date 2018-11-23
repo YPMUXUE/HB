@@ -5,6 +5,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.ReferenceCountUtil;
 
 public class HeaderIdentifyHandler extends ChannelDuplexHandler {
     private static final int heartBeat=0xCAFE;
@@ -30,7 +31,8 @@ public class HeaderIdentifyHandler extends ChannelDuplexHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf m=(ByteBuf)msg;
-        ctx.alloc().buffer(6).writeBytes()
-        super.write(ctx, m, promise);
+        ByteBuf result=ctx.alloc().buffer(6).writeBytes(new byte[]{(byte)0x03,(byte)0x20}).writeInt(m.readableBytes()).writeBytes(m);
+        ReferenceCountUtil.release(msg);
+        super.write(ctx, result, promise);
     }
 }
