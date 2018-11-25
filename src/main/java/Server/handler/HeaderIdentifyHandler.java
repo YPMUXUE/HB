@@ -3,13 +3,13 @@ package Server.handler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 
 public class HeaderIdentifyHandler extends ChannelDuplexHandler {
-    private static final int heartBeat=0xCAFE;
-    private static final int header=0x0320;
+    public static final int heartBeat=0xCAFE;
+    public static final int header=0x0320;
+    public static final int connectActive=0x1995;
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ByteBuf m=(ByteBuf)msg;

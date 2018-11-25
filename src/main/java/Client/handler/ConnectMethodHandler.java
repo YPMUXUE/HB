@@ -5,7 +5,6 @@ import Client.log.LogUtil;
 import Client.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -32,6 +31,7 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
          Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),HostAndPort.resolve(msg),(channelFuture, channelToProxyServer)->{
             if (channelFuture.isSuccess()){
                 LogUtil.info(()->(hostName + "connect success"));
+                channelToProxyServer.pipeline().addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
 
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));

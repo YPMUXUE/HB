@@ -25,13 +25,13 @@ public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (recycleTargetChannel) {
-            //recycle
-            targetChannel.deregister();
-            targetChannel.close();
-        }else{
-            targetChannel.close();
-        }
+//        if (recycleTargetChannel) {
+//            //recycle
+//            targetChannel.deregister();
+//            targetChannel.close();
+//        }else{
+//            targetChannel.close();
+//        }
         super.channelInactive(ctx);
     }
 }

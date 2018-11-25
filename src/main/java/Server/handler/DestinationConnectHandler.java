@@ -1,6 +1,7 @@
 package Server.handler;
 
 import Client.handler.SimpleTransferHandler;
+import Client.log.LogUtil;
 import Client.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -12,8 +13,6 @@ import resource.HttpResources;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private byte[] destinationCache;
@@ -37,6 +36,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                             ctx.pipeline().addAfter(ctx.name(),"DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
                             ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
                         }else{
+                            LogUtil.info(()->"connect failed");
                             this.connectFinished=false;
                             ctx.channel().close();
                         }
