@@ -25,7 +25,6 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
         msg.readBytes(destination);
         if (this.destinationCache == null){
             this.destinationCache=destination;
-            msg.retain();
             Connections.newConnectionToServer(ctx
                     ,new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0],destination[1],destination[2],destination[3]}),((destination[4] & 0xFF)<<8)|(destination[5] & 0xFF))
                     ,(status, channelToServer)->{
@@ -33,7 +32,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                             this.connectFinished=true;
                             this.connectToServerChannel=channelToServer;
 
-                            ctx.pipeline().addAfter(ctx.name(),"DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
+                            ctx.pipeline().addLast("DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
                             ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
                         }else{
                             LogUtil.info(()->"connect failed");
@@ -54,7 +53,6 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                 this.connectToServerChannel.close();
             }
             this.connectToServerChannel = null;
-            msg.retain();
             Connections.newConnectionToServer(ctx
                     , new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0], destination[1], destination[2], destination[3]}), ((destination[4] & 0xFF) << 8) | (destination[5] & 0xFF))
                     , (status, channelToServer)->{
