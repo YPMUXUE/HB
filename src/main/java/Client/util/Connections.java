@@ -24,8 +24,7 @@ public class Connections {
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
-                     ch.pipeline().addLast("readtimeout",new ReadTimeoutHandler(30))
-                             .addLast("transfer",new SimpleTransferHandler(ctx.channel()));
+                     ch.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(30));
                     }
                 });
         ChannelFuture future = bootstrap.connect(address);

@@ -2,7 +2,6 @@ package Client.handler;
 
 import Client.log.LogUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -11,16 +10,16 @@ import java.nio.charset.Charset;
 
 public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
     protected final Channel targetChannel;
-    private final boolean recycleTargetChannel;
+    private final boolean closeTargetChannel;
 
     public SimpleTransferHandler(Channel channel) {
         targetChannel = channel;
-        this.recycleTargetChannel = false;
+        this.closeTargetChannel = false;
     }
 
-    public SimpleTransferHandler(Channel targetChannel, boolean recycleTargetChannel) {
+    public SimpleTransferHandler(Channel targetChannel, boolean closeTargetChannel) {
         this.targetChannel = targetChannel;
-        this.recycleTargetChannel = recycleTargetChannel;
+        this.closeTargetChannel = closeTargetChannel;
     }
 
     @Override
@@ -31,11 +30,9 @@ public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (recycleTargetChannel) {
+        if (closeTargetChannel) {
             //recycle
 //            targetChannel.deregister();
-            targetChannel.close();
-        }else{
             targetChannel.close();
         }
         super.channelInactive(ctx);

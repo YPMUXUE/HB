@@ -1,6 +1,7 @@
 package Server;
 
 import Server.handler.DestinationConnectHandler;
+import Server.handler.ExceptionLoggerHandler;
 import Server.handler.HeaderIdentifyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -42,7 +43,8 @@ public class ProxyServer {
                 pipeline.addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,0,true))
                         .addLast("ReadTimeoutHandler",new ReadTimeoutHandler(30))
                         .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
-                        .addLast("DestinationConnectHandler",new DestinationConnectHandler());
+                        .addLast("DestinationConnectHandler",new DestinationConnectHandler())
+                .addLast("ExceptionLoggerHandler",new ExceptionLoggerHandler((ctx,cause)->ctx.channel().remoteAddress().toString()+":"+cause.toString()));
             }
         });
         proxyServer.serverChannel.closeFuture().addListener((f) -> {
