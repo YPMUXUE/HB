@@ -1,5 +1,6 @@
 package Server;
 
+import Client.log.LogUtil;
 import Server.handler.DestinationConnectHandler;
 import Server.handler.ExceptionLoggerHandler;
 import Server.handler.HeaderIdentifyHandler;
@@ -21,9 +22,11 @@ public class ProxyServer {
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer);
-        ChannelFuture future = bootstrap.bind("127.0.0.1", port);
+        InetAddress localAddr=InetAddress.getLocalHost();
+        ChannelFuture future = bootstrap.bind(localAddr, port);
         future.addListener(f->{
             if (f.isSuccess()){
+                LogUtil.info(()->localAddr.toString()+" bind success");
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     serverChannel.close().syncUninterruptibly();
                 }));
