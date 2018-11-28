@@ -31,12 +31,12 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
          Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),HostAndPort.resolve(msg),(channelFuture, channelToProxyServer)->{
             if (channelFuture.isSuccess()){
                 LogUtil.info(()->(hostName + "connect success"));
-                channelToProxyServer.pipeline().addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
+                channelToProxyServer.pipeline().addLast("Transfer",new SimpleTransferHandler(ctx.channel(),true));
 
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(60, TimeUnit.SECONDS))
-                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer))
+                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer,true))
                         .addLast("ExceptionHandler",new ExceptionLoggerHandler("ConnectMethodHandler"));
                 channelToProxyServer.writeAndFlush(Unpooled.EMPTY_BUFFER);
             }else{

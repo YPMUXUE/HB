@@ -43,7 +43,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
             });
         }else if (isSameDestination(destinationCache,destination)){
             //do nothing
-            if (this.connectFinished) {
+            if (this.connectFinished && this.connectToServerChannel.isOpen()) {
                 ctx.fireChannelRead(msg.retain());
             } else{
                 //todo pending write queue
