@@ -44,7 +44,7 @@ public class ProxyClient {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
-                pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS));
+                pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(60, TimeUnit.SECONDS));
                 pipeline.addLast("ConnectMethodHandler",new ConnectMethodHandler());
                 pipeline.addLast("ExceptionHandler",new ExceptionLoggerHandler("ProxyClient"));
             }

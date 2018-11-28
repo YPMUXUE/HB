@@ -35,7 +35,7 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
 
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
-                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(15, TimeUnit.SECONDS))
+                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(60, TimeUnit.SECONDS))
                         .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer))
                         .addLast("ExceptionHandler",new ExceptionLoggerHandler("ConnectMethodHandler"));
                 channelToProxyServer.writeAndFlush(Unpooled.EMPTY_BUFFER);

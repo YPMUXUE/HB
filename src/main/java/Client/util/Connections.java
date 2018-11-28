@@ -55,7 +55,7 @@ public class Connections {
 
                     }
                 });
-        ChannelFuture future=bootstrap.connect("127.0.0.1",9002);
+        ChannelFuture future=bootstrap.connect("111.231.138.54",9002);
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
