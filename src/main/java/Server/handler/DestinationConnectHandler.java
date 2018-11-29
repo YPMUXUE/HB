@@ -29,7 +29,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                     ,new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0],destination[1],destination[2],destination[3]}),((destination[4] & 0xFF)<<8)|(destination[5] & 0xFF))
                     ,(status, channelToServer)->{
                         if (status==1){
-                            channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel()));
+                            channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel(),true));
                             this.connectFinished=true;
                             this.connectToServerChannel=channelToServer;
 
@@ -66,7 +66,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                 , new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0], destination[1], destination[2], destination[3]}), ((destination[4] & 0xFF) << 8) | (destination[5] & 0xFF))
                 , (status, channelToServer)->{
                     if (status==1){
-                        channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel()));
+                        channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel(),true));
                         this.connectFinished=true;
                         this.connectToServerChannel=channelToServer;
 

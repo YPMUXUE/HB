@@ -4,6 +4,7 @@ import Client.bean.HostAndPort;
 import Client.handler.AddDestinationHandler;
 import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
+import common.handler.ReadWriteTimeoutHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -24,7 +25,7 @@ public class Connections {
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
-                     ch.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout));
+                     ch.pipeline().addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(SystemConfig.timeout));
                     }
                 });
         ChannelFuture future = bootstrap.connect(address);

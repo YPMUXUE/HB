@@ -1,4 +1,4 @@
-package Server.handler;
+package common.handler;
 
 import common.log.LogUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -6,9 +6,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.util.function.BiFunction;
 
-public class ExceptionLoggerHandler extends ChannelInboundHandlerAdapter {
+public class EventLoggerHandler extends ChannelInboundHandlerAdapter {
     private final BiFunction<ChannelHandlerContext,Throwable,String> exceptionHandler;
-    public ExceptionLoggerHandler(BiFunction<ChannelHandlerContext, Throwable,String> exceptionHandler) {
+    public EventLoggerHandler(BiFunction<ChannelHandlerContext, Throwable,String> exceptionHandler) {
         this.exceptionHandler = exceptionHandler;
     }
 

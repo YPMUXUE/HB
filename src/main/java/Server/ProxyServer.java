@@ -1,9 +1,9 @@
 package Server;
 
+import common.handler.EventLoggerHandler;
 import common.handler.ReadWriteTimeoutHandler;
 import common.log.LogUtil;
 import Server.handler.DestinationConnectHandler;
-import Server.handler.ExceptionLoggerHandler;
 import Server.handler.HeaderIdentifyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -48,7 +48,7 @@ public class ProxyServer {
                         .addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(SystemConfig.timeout))
                         .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
                         .addLast("DestinationConnectHandler",new DestinationConnectHandler())
-                .addLast("ExceptionLoggerHandler",new ExceptionLoggerHandler((ctx,cause)->ctx.channel().remoteAddress().toString()+":"+cause.toString()));
+                .addLast("EventLoggerHandler",new EventLoggerHandler((ctx, cause)->"EventLoggerHandler:ProxyServer "+ctx.channel().toString()+":"+cause.toString()));
             }
         });
         proxyServer.serverChannel.closeFuture().addListener((f) -> {
