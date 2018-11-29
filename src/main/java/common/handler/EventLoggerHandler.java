@@ -3,7 +3,6 @@ package common.handler;
 import common.log.LogUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 
 import java.util.function.BiFunction;
@@ -22,7 +21,7 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        LogUtil.info(()->ctx.channel().toString()+ "close.");
+        LogUtil.info(()->ctx.channel().toString()+ "closed.");
         super.close(ctx, promise);
     }
 }
