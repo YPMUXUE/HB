@@ -1,4 +1,4 @@
-package Client.util;
+package util;
 
 import Client.bean.HostAndPort;
 import Client.handler.AddDestinationHandler;

@@ -1,8 +1,8 @@
 package Server.handler;
 
 import Client.handler.SimpleTransferHandler;
-import Client.log.LogUtil;
-import Client.util.Connections;
+import log.LogUtil;
+import util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

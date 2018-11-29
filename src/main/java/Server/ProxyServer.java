@@ -1,6 +1,7 @@
 package Server;
 
-import Client.log.LogUtil;
+import Server.handler.ReadWriteTimeoutHandler;
+import log.LogUtil;
 import Server.handler.DestinationConnectHandler;
 import Server.handler.ExceptionLoggerHandler;
 import Server.handler.HeaderIdentifyHandler;
@@ -44,7 +45,7 @@ public class ProxyServer {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,0,true))
-                        .addLast("ReadTimeoutHandler",new ReadTimeoutHandler(30))
+                        .addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(60))
                         .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
                         .addLast("DestinationConnectHandler",new DestinationConnectHandler())
                 .addLast("ExceptionLoggerHandler",new ExceptionLoggerHandler((ctx,cause)->ctx.channel().remoteAddress().toString()+":"+cause.toString()));

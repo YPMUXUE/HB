@@ -1,6 +1,6 @@
 package Client.handler;
 
-import Client.log.LogUtil;
+import log.LogUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 

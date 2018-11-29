@@ -1,10 +1,9 @@
 package Server.handler;
 
-import Client.log.LogUtil;
+import log.LogUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 public class ExceptionLoggerHandler extends ChannelInboundHandlerAdapter {

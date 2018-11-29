@@ -1,8 +1,8 @@
 package Client.handler;
 
 import Client.bean.HostAndPort;
-import Client.log.LogUtil;
-import Client.util.Connections;
+import log.LogUtil;
+import util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
