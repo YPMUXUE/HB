@@ -1,8 +1,10 @@
 package Client.handler;
 
 import Client.bean.HostAndPort;
-import log.LogUtil;
-import util.Connections;
+import common.handler.SimpleTransferHandler;
+import common.log.LogUtil;
+import common.resource.SystemConfig;
+import common.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,7 +37,7 @@ public class ConnectMethodHandler extends SimpleChannelInboundHandler<FullHttpRe
 
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
-                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(60, TimeUnit.SECONDS))
+                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
                         .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer,true))
                         .addLast("ExceptionHandler",new ExceptionLoggerHandler("ConnectMethodHandler"));
                 channelToProxyServer.writeAndFlush(Unpooled.EMPTY_BUFFER);

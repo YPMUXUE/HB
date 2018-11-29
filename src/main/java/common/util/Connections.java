@@ -1,30 +1,30 @@
-package util;
+package common.util;
 
 import Client.bean.HostAndPort;
 import Client.handler.AddDestinationHandler;
 import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
-import Client.handler.SimpleTransferHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.concurrent.Future;
+import common.resource.SystemConfig;
 
 import java.net.SocketAddress;
 import java.util.function.BiConsumer;
 
 
 public class Connections {
-    public static ChannelFuture newConnectionToServer(ChannelHandlerContext ctx, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
+    public static ChannelFuture newConnectionToServer(EventLoop eventLoop, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
         Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(ctx.channel().eventLoop())
+        bootstrap.group(eventLoop)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
-                     ch.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(30));
+                     ch.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout));
                     }
                 });
         ChannelFuture future = bootstrap.connect(address);

@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import common.resource.SystemConfig;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +45,7 @@ public class ProxyClient {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
-                pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(60, TimeUnit.SECONDS));
+                pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS));
                 pipeline.addLast("ConnectMethodHandler",new ConnectMethodHandler());
                 pipeline.addLast("ExceptionHandler",new ExceptionLoggerHandler("ProxyClient"));
             }

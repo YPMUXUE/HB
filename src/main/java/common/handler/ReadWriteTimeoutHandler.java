@@ -1,10 +1,9 @@
-package Server.handler;
+package common.handler;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import log.LogUtil;
+import common.log.LogUtil;
 
 import java.util.concurrent.TimeUnit;
 

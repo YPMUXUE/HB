@@ -1,4 +1,4 @@
-package log;
+package common.log;
 
 import java.io.PrintStream;
 import java.util.Objects;

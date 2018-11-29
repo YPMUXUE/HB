@@ -1,7 +1,7 @@
 package Server;
 
-import Server.handler.ReadWriteTimeoutHandler;
-import log.LogUtil;
+import common.handler.ReadWriteTimeoutHandler;
+import common.log.LogUtil;
 import Server.handler.DestinationConnectHandler;
 import Server.handler.ExceptionLoggerHandler;
 import Server.handler.HeaderIdentifyHandler;
@@ -10,7 +10,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.timeout.ReadTimeoutHandler;
+import common.resource.SystemConfig;
 
 import java.net.InetAddress;
 
@@ -45,7 +45,7 @@ public class ProxyServer {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,0,true))
-                        .addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(60))
+                        .addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(SystemConfig.timeout))
                         .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
                         .addLast("DestinationConnectHandler",new DestinationConnectHandler())
                 .addLast("ExceptionLoggerHandler",new ExceptionLoggerHandler((ctx,cause)->ctx.channel().remoteAddress().toString()+":"+cause.toString()));

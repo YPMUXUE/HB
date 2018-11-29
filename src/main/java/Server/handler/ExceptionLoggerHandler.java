@@ -1,6 +1,6 @@
 package Server.handler;
 
-import log.LogUtil;
+import common.log.LogUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -15,5 +15,6 @@ public class ExceptionLoggerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LogUtil.info(()->exceptionHandler.apply(ctx,cause));
+        ctx.channel().close();
     }
 }

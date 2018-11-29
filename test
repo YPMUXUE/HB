@@ -1,1 +1,4 @@
-build.plugins.plugin.version
+HttpObjectAggregator$AggregatedFullHttpRequest(decodeResult: success, version: HTTP/1.1, content: CompositeByteBuf(ridx: 0, widx: 0, cap: 0, components=0))
+CONNECT [::1]:9229 HTTP/1.1
+Host: [::1]:9229
+content-length: 0

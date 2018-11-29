@@ -1,6 +1,6 @@
-package Client.handler;
+package common.handler;
 
-import log.LogUtil;
+import common.log.LogUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
