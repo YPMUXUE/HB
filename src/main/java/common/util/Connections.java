@@ -62,7 +62,7 @@ public class Connections {
             if (f.isSuccess()){
                 channelConsumer.accept(f,channel);
             }else{
-                channelConsumer.accept(f,null);
+                channelConsumer.accept(f,channel);
             }
         });
         return future;

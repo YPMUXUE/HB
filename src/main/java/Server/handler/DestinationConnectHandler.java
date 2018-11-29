@@ -36,7 +36,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                             ctx.pipeline().addAfter(ctx.name(),"DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
                             ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
                         }else{
-                            LogUtil.info(()->"connect failed");
+                            LogUtil.info(()->channelToServer.toString()+" connect failed");
                             this.connectFinished=false;
                             ctx.channel().close();
                         }
@@ -73,6 +73,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                         ctx.pipeline().replace("DestinationConnectHandler*Transfer","DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
                         ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
                     }else{
+                        LogUtil.info(()->channelToServer.toString()+" connect failed");
                         this.connectFinished=false;
                         ctx.channel().close();
                     }
