@@ -2,6 +2,7 @@ package Server.handler;
 
 import common.handler.SimpleTransferHandler;
 import common.log.LogUtil;
+import common.resource.ConnectionEvents;
 import common.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -10,7 +11,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import common.resource.HttpResources;
-import sun.rmi.runtime.Log;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -21,6 +21,7 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
     private byte[] destinationCache;
     private volatile Channel connectToServerChannel;
     private volatile boolean connectFinished=false;
+    private boolean isHTTPS;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
@@ -28,6 +29,10 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
         msg.readBytes(destination);
         if (this.destinationCache == null){
             this.destinationCache=destination;
+            boolean isHTTPS=this.isHTTPS;
+            if (!isHTTPS){
+                msg.retain();
+            }
             ChannelFuture channelFuture=Connections.newConnectionToServer(ctx.channel().eventLoop()
                     ,new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0],destination[1],destination[2],destination[3]}),((destination[4] & 0xFF)<<8)|(destination[5] & 0xFF))
                     ,(status, channelToServer)->{
@@ -37,7 +42,11 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                             this.connectToServerChannel=channelToServer;
 
                             ctx.pipeline().addAfter(ctx.name(),"DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
-                            ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
+                            if (isHTTPS) {
+                                ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established, Charset.forName("utf-8")));
+                            }else{
+                                ctx.fireChannelRead(msg);
+                            }
                         }else{
                             LogUtil.info(()->channelToServer.toString()+" connect failed");
                             ctx.channel().close();
@@ -51,20 +60,24 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
             if (this.connectToServerChannel.isOpen()) {
                 ctx.fireChannelRead(msg.retain());
             } else{
-                reConnect(ctx,destination);
+                reConnect(ctx,destination,msg);
             }
         }else{
             if (this.connectFinished) {
                 this.connectToServerChannel.close();
             }
             this.connectToServerChannel = null;
-            reConnect(ctx,destination);
+            reConnect(ctx,destination,msg);
         }
 
 
     }
 
-    private void reConnect(ChannelHandlerContext ctx, byte[] destination) throws Exception {
+    private void reConnect(ChannelHandlerContext ctx, byte[] destination, ByteBuf msg) throws Exception {
+        boolean isHTTPS=this.isHTTPS;
+        if (!isHTTPS){
+            msg.retain();
+        }
         ChannelFuture channelFuture=Connections.newConnectionToServer(ctx.channel().eventLoop()
                 , new InetSocketAddress(InetAddress.getByAddress(new byte[]{destination[0], destination[1], destination[2], destination[3]}), ((destination[4] & 0xFF) << 8) | (destination[5] & 0xFF))
                 , (status, channelToServer)->{
@@ -74,7 +87,11 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
                         this.connectToServerChannel=channelToServer;
 
                         ctx.pipeline().replace("DestinationConnectHandler*Transfer","DestinationConnectHandler*Transfer",new SimpleTransferHandler(channelToServer,true));
-                        ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established,Charset.forName("utf-8")));
+                        if (isHTTPS) {
+                            ctx.channel().writeAndFlush(Unpooled.copiedBuffer(HttpResources.HttpResponse.Connection_Established, Charset.forName("utf-8")));
+                        }else{
+                            ctx.fireChannelRead(msg);
+                        }
                     }else{
                         LogUtil.info(()->channelToServer.toString()+" connect failed");
                         ctx.channel().close();
@@ -95,5 +112,21 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
             }
         }
         return true;
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof ConnectionEvents){
+            switch ((ConnectionEvents)evt){
+                case HTTP_REQ:
+                    this.isHTTPS =false;
+                    break;
+                case HTTPS_REQ:
+                    this.isHTTPS =true;
+                    break;
+            }
+        }else{
+            ctx.fireUserEventTriggered(evt);
+        }
     }
 }

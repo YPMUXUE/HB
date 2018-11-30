@@ -39,7 +39,7 @@ public class Connections {
         });
         return future;
     }
-    public static ChannelFuture newConnectionToProxyServer(EventLoop eventLoop, HostAndPort destination, BiConsumer<Future,Channel> channelConsumer){
+    public static ChannelFuture newConnectionToProxyServer(EventLoop eventLoop, BiConsumer<Future,Channel> channelConsumer){
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(eventLoop)
                 .channel(NioSocketChannel.class)
@@ -51,8 +51,7 @@ public class Connections {
 //                                .addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
                         //outbound
                         ch.pipeline().addLast("header",new AddHeaderHandler())
-                                .addLast("length",new AddLengthHandler())
-                                .addLast("destination", new AddDestinationHandler(destination));
+                                .addLast("length",new AddLengthHandler());
 
                     }
                 });
