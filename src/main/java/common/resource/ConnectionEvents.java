@@ -1,7 +1,5 @@
 package common.resource;
 
-import java.util.Objects;
-
 public enum  ConnectionEvents {
-    HTTP_REQ,HTTPS_REQ
+    RECONNECT_IF_NECESSARY, USE_OLD_CONNECTION,NEW_CONNECT
 }
