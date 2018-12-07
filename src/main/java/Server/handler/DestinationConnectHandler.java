@@ -118,10 +118,10 @@ public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteB
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof ConnectionEvents){
             switch ((ConnectionEvents)evt){
-                case HTTP_REQ:
+                case RECONNECT_IF_NECESSARY:
                     this.isHTTPS =false;
                     break;
-                case HTTPS_REQ:
+                case USE_OLD_CONNECTION:
                     this.isHTTPS =true;
                     break;
             }
