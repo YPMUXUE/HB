@@ -7,6 +7,23 @@
     <groupId>HB</groupId>
     <artifactId>HB</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <profiles>
+        <profile>
+            <id>s</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <runAs>Server.ProxyServer</runAs>
+            </properties>
+        </profile>
+        <profile>
+            <id>c</id>
+            <properties>
+                <runAs>Client.ProxyClient</runAs>
+            </properties>
+        </profile>
+    </profiles>
     <build>
         <plugins>
             <plugin>
@@ -30,7 +47,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>Server.ProxyServer</mainClass>
+                                    <mainClass>${runAs}</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
