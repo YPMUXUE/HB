@@ -2,21 +2,31 @@ package Server.handler;
 
 import common.Message;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageCodec;
+import io.netty.channel.ChannelPromise;
 
-import java.util.List;
-
-public class MessageTransferHandler extends ByteToMessageCodec<Message> {
+public class MessageTransferHandler extends ChannelDuplexHandler {
     @Override
-    protected void encode(ChannelHandlerContext ctx, Message msg, ByteBuf out) throws Exception {
-        out.writeShort(msg.getOperationCode())
-                .writeInt(msg.getContent().readableBytes())
-                .writeBytes(msg.getContent());
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            super.channelRead(ctx, Message.resloveRequest((ByteBuf) msg));
+        }else{
+            super.channelRead(ctx,msg);
+        }
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        out.add(new Message(in));
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Message){
+            Message m=(Message)msg;
+            ByteBuf out=ctx.alloc().buffer(6+m.getContent().readableBytes())
+                    .writeShort(m.getOperationCode())
+                    .writeInt(m.getContent().readableBytes())
+                    .writeBytes(m.getContent());
+            super.write(ctx,out,promise);
+        }else {
+            super.write(ctx, msg, promise);
+        }
     }
 }

@@ -27,7 +27,7 @@ public class ProxyServer {
         ChannelFuture future = bootstrap.bind(localAddr, port);
         future.addListener(f->{
             if (f.isSuccess()){
-                LogUtil.info(()->localAddr.toString()+" bind success");
+                LogUtil.info(()->localAddr.toString()+"success bind on port "+port);
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     serverChannel.close().syncUninterruptibly();
                 }));

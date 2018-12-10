@@ -1,8 +1,8 @@
 package Client;
 
-import Client.handler.ExceptionLoggerHandler;
 import Client.handler.ConnectMethodHandler;
-import Client.handler.HTTPMethodHandler;
+import Client.handler.ExceptionLoggerHandler;
+import common.resource.SystemConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -11,7 +11,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
-import common.resource.SystemConfig;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +47,6 @@ public class ProxyClient {
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
                 pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS));
                 pipeline.addLast("ConnectMethodHandler",new ConnectMethodHandler());
-                pipeline.addLast("HTTPMethodHandler",new HTTPMethodHandler());
                 pipeline.addLast("ExceptionHandler",new ExceptionLoggerHandler("ProxyClient"));
             }
         });

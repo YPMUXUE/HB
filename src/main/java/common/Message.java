@@ -24,12 +24,18 @@ public class Message implements ReferenceCounted {
         return this;
     }
 
-    public Message(ByteBuf msg) {
-        this.operationCode=msg.readShort();
-        this.length=msg.readInt();
-        this.destination=new byte[6];
-        msg.readBytes(this.destination);
-        this.content=msg;
+    private Message() {
+
+    }
+
+    public static Message resloveRequest(ByteBuf msg){
+        Message m=new Message();
+        m.operationCode=msg.readShort();
+        m.length=msg.readInt();
+        m.destination=new byte[6];
+        msg.readBytes(m.destination);
+        m.content=msg;
+        return m;
     }
 
     public int getOperationCode() {
