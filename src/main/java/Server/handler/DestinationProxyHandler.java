@@ -20,6 +20,8 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
                     handleOneOffConnection(ctx,m);break;
                 case SystemConfig.NEW_KEEP_CONNECTION:
                     handleNewKeepConnection(ctx,m);break;
+                case SystemConfig.SIMPLE_MESSAGE:
+
                 default:
                     ctx.channel().close();
             }
