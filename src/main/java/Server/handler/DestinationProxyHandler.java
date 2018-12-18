@@ -21,17 +21,17 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
                 case SystemConfig.NEW_KEEP_CONNECTION:
                     handleNewKeepConnection(ctx,m);break;
                 case SystemConfig.SIMPLE_MESSAGE:
-
+                    handleSimpleMessage(ctx,m); break;
                 default:
                     ctx.channel().close();
             }
-//            byte[] destination=m.getDestination();
-//            if (this.destinationCache == null) {
-//                this.destinationCache = destination;
-//            }
         }else {
             ctx.fireChannelRead(msg);
         }
+    }
+
+    private void handleSimpleMessage(ChannelHandlerContext ctx, Message m) {
+        ctx.fireChannelRead(m);
     }
 
     private void handleNewKeepConnection(ChannelHandlerContext ctx, Message m) {
