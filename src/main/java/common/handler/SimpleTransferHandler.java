@@ -2,13 +2,11 @@ package common.handler;
 
 import common.log.LogUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.*;
 
 import java.nio.charset.Charset;
 
-public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
+public class SimpleTransferHandler extends ChannelDuplexHandler {
     protected final Channel targetChannel;
     private final boolean closeTargetChannel;
 
@@ -28,13 +26,21 @@ public class SimpleTransferHandler extends ChannelInboundHandlerAdapter {
         targetChannel.writeAndFlush(msg);
     }
 
+//    @Override
+//    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+//        if (closeTargetChannel) {
+//            //recycle
+////            targetChannel.deregister();
+//            targetChannel.close();
+//        }
+//        super.channelInactive(ctx);
+//    }
+
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (closeTargetChannel) {
-            //recycle
-//            targetChannel.deregister();
             targetChannel.close();
         }
-        super.channelInactive(ctx);
+        super.close(ctx,promise);
     }
 }

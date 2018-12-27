@@ -9,6 +9,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
     private byte[] destinationCache;
     private volatile Channel connectToServerChannel;
+    private boolean finished=false;
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Message){
