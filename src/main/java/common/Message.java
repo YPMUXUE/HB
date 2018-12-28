@@ -6,7 +6,7 @@ import io.netty.util.ReferenceCounted;
 public class Message implements ReferenceCounted {
     private short operationCode;
     private byte[] destination;
-    private int length;
+    private int contentLength;
     private ByteBuf content;
 
     public Message setOperationCode(short operationCode) {
@@ -24,14 +24,14 @@ public class Message implements ReferenceCounted {
         return this;
     }
 
-    private Message() {
+    public Message() {
 
     }
 
     public static Message resloveRequest(ByteBuf msg){
         Message m=new Message();
         m.operationCode=msg.readShort();
-        m.length=msg.readInt();
+        m.contentLength =msg.readInt();
         m.destination=new byte[6];
         msg.readBytes(m.destination);
         m.content=msg;
@@ -46,8 +46,8 @@ public class Message implements ReferenceCounted {
         return destination;
     }
 
-    public int getLength() {
-        return length;
+    public int getContentLength() {
+        return contentLength;
     }
 
     public ByteBuf getContent() {
