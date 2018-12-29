@@ -37,7 +37,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
     }
 
     private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg) {
-        msg.
+//        msg.
     }
 
     private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg) {

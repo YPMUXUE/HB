@@ -1,13 +1,34 @@
 package common;
 
+import Client.bean.HostAndPort;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
 
 public class Message implements ReferenceCounted {
     private short operationCode;
     private byte[] destination;
+
+    public void setContentLength(int contentLength) {
+        this.contentLength = contentLength;
+    }
+
     private int contentLength;
     private ByteBuf content;
+
+    public Message(short operationCode, HostAndPort hostAndPort, ByteBuf content) throws Exception{
+        this.operationCode=operationCode;
+        this.content=content;
+        if (hostAndPort==null){
+            this.destination=null;
+        }else {
+            this.destination = getDestinationBytes(hostAndPort);
+        }
+    }
+    public Message(short operationCode, byte[] destination, ByteBuf content) throws Exception{
+        this.operationCode=operationCode;
+        this.content=content;
+        this.destination=destination;
+    }
 
     public Message setOperationCode(short operationCode) {
         this.operationCode = operationCode;
@@ -37,6 +58,24 @@ public class Message implements ReferenceCounted {
         m.content=msg;
         return m;
     }
+    private byte[] getDestinationBytes(HostAndPort hostAndPort) throws Exception {
+        byte[] host = hostAndPort.getHost().getAddress();
+        int iport = hostAndPort.getPort();
+        byte[] port = new byte[]{
+//                (byte) ((iport >> 24) & 0xFF),
+//                (byte) ((iport >> 16) & 0xFF),
+                (byte) ((iport >> 8) & 0xFF),
+                (byte) (iport & 0xFF)
+        };
+        return new byte[]{
+                host[0],
+                host[1],
+                host[2],
+                host[3],
+                port[0],
+                port[1]
+        };
+    }
 
     public int getOperationCode() {
         return operationCode;
@@ -61,22 +100,26 @@ public class Message implements ReferenceCounted {
 
     @Override
     public ReferenceCounted retain() {
-        return content.retain();
+        content.retain();
+        return this;
     }
 
     @Override
     public ReferenceCounted retain(int increment) {
-        return content.retain(increment);
+        content.retain(increment);
+        return this;
     }
 
     @Override
     public ReferenceCounted touch() {
-        return content.touch();
+         content.touch();
+         return this;
     }
 
     @Override
     public ReferenceCounted touch(Object hint) {
-        return content.touch(hint);
+        content.touch(hint);
+        return this;
     }
 
     @Override
