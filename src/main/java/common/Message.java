@@ -7,13 +7,13 @@ import io.netty.util.ReferenceCounted;
 public class Message implements ReferenceCounted {
     private short operationCode;
     private byte[] destination;
+    //没啥用，解析包不用这个
+    private int contentLength;
+    private ByteBuf content;
 
     public void setContentLength(int contentLength) {
         this.contentLength = contentLength;
     }
-
-    private int contentLength;
-    private ByteBuf content;
 
     public Message(short operationCode, HostAndPort hostAndPort, ByteBuf content) throws Exception{
         this.operationCode=operationCode;

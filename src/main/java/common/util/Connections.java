@@ -5,6 +5,8 @@ import Client.handler.AddDestinationHandler;
 import Client.handler.AddHeaderHandler;
 import Client.handler.AddLengthHandler;
 import common.handler.ReadWriteTimeoutHandler;
+import common.handler.coder.ByteBufToMessageInboundHandler;
+import common.handler.coder.MessageToByteBufOutboundHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -47,15 +49,14 @@ public class Connections {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         //inbound
-                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,6,true));
-//                                .addLast("Transfer",new SimpleTransferHandler(ctx.channel()));
+                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,0,true))
+                                .addLast("ByteBufToMessageHandler",new ByteBufToMessageInboundHandler());
                         //outbound
-                        ch.pipeline().addLast("header",new AddHeaderHandler())
-                                .addLast("length",new AddLengthHandler());
+                        ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());
 
                     }
                 });
-        ChannelFuture future=bootstrap.connect("111.231.138.54",9002);
+        ChannelFuture future=bootstrap.connect("172.25.3.80",5559);
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){

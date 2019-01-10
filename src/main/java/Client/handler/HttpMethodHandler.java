@@ -46,11 +46,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
         Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
             if (channelFuture.isSuccess()){
                 LogUtil.info(()->(hostName + "connect success"));
-                try {
-                    channelToProxyServer.pipeline().addLast("destination",new AddDestinationHandler(destination));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+
                 channelToProxyServer.pipeline().addLast("Transfer",new SimpleTransferHandler(ctx.channel(),true));
 
                 //删除所有RequestToClient下ChannelHandler
