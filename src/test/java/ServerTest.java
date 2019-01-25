@@ -21,11 +21,11 @@ public class ServerTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4));
+//                        pipeline.addLast(new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4));
                         pipeline.addLast(new SoutChannelInboundHandler());
                     }
                 });
-        ChannelFuture future = bootstrap.bind(InetAddress.getByName("localhost"), 9002);
+        ChannelFuture future = bootstrap.bind(InetAddress.getLoopbackAddress(), 9002);
         Channel serverChannel=future.channel();
         serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");
@@ -43,7 +43,6 @@ public class ServerTest {
 //            byte[] buffer=new byte[msg.readableBytes()];
 //            msg.readBytes(buffer);
 //            System.out.println(new String(buffer));
-            System.out.println(ByteBufUtil.hexDump(msg.readBytes(6+6)));
             System.out.println(msg.toString(StandardCharsets.UTF_8));
             String message="HTTP/1.1 200 OK\r\n" +
                     "Content-Type: application/json; charset=utf-8\r\n" +

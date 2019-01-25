@@ -1,17 +1,13 @@
 package common.util;
 
-import Client.bean.HostAndPort;
-import Client.handler.AddDestinationHandler;
-import Client.handler.AddHeaderHandler;
-import Client.handler.AddLengthHandler;
 import common.handler.ReadWriteTimeoutHandler;
 import common.handler.coder.ByteBufToMessageInboundHandler;
 import common.handler.coder.MessageToByteBufOutboundHandler;
+import config.StaticConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.concurrent.Future;
 import common.resource.SystemConfig;
 
@@ -20,6 +16,7 @@ import java.util.function.BiConsumer;
 
 
 public class Connections {
+    private static final Bootstrap defaultBootstrap=new Bootstrap();
     public static ChannelFuture newConnectionToServer(EventLoop eventLoop, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(eventLoop)
@@ -41,22 +38,26 @@ public class Connections {
         });
         return future;
     }
+
+    /**
+     *
+     */
     public static ChannelFuture newConnectionToProxyServer(EventLoop eventLoop, BiConsumer<Future,Channel> channelConsumer){
-        Bootstrap bootstrap = new Bootstrap();
+        Bootstrap bootstrap = defaultBootstrap.clone();
         bootstrap.group(eventLoop)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         //inbound
-                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE,2,4,0,0,true))
+                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",HandlerHelper.getDefaultFrameDecoderInstance())
                                 .addLast("ByteBufToMessageHandler",new ByteBufToMessageInboundHandler());
                         //outbound
                         ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());
 
                     }
                 });
-        ChannelFuture future=bootstrap.connect("172.25.3.80",5559);
+        ChannelFuture future=bootstrap.connect(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT);
         Channel channel=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
