@@ -3,13 +3,16 @@ package Client.handler;
 import Client.bean.HostAndPort;
 import common.Message;
 import common.handler.SimpleTransferHandler;
+import common.log.LogUtil;
 import common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.ReferenceCountUtil;
 
+import java.nio.charset.Charset;
 import java.util.concurrent.*;
 
 public class ProxyTransferHandler extends SimpleTransferHandler {
@@ -38,13 +41,25 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
         if (connectFinished) {
             super.channelRead(ctx, msg);
         } else {
-            if (msg instanceof ByteBuf) {
-                handleResponse(ctx, (ByteBuf) msg);
-            } else if (msg instanceof Message) {
-                handleResponse(ctx, (Message) msg);
+            try {
+                if (msg instanceof ByteBuf) {
+                    handleResponse(ctx, (ByteBuf) msg);
+                } else if (msg instanceof Message) {
+                    handleResponse(ctx, (Message) msg);
+                }
+            }catch (Exception e){
+                LogUtil.info(()->"connect to proxy server error result:"+e.toString());
+                ReferenceCountUtil.release(msg);
+                ctx.channel().close();
+                return;
             }
-            ctx.fireChannelRead(msg);
+            notifyTargetChannel(ctx,msg);
         }
+    }
+
+    private void notifyTargetChannel(ChannelHandlerContext ctx, Object msg) {
+            targetChannel.writeAndFlush(msg);
+
     }
 
     @Override
@@ -87,9 +102,19 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
                 }
                 pendingWrite = null;
             }
-            super.write(ctx, msg, promise);
+            this.write0(ctx, msg, promise);
         } else {
             pendingWrite.put(new PendingWriteItem(msg, promise));
+        }
+    }
+
+    private void write0(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Message){
+            super.write(ctx,msg,promise);
+        }else if(msg instanceof ByteBuf){
+            super.write(ctx,new Message(ConnectionEvents.CONNECT.getCode(),(HostAndPort) null,(ByteBuf) msg),promise);
+        }else {
+            throw new RuntimeException("ProxyTransferHandler#write0 the msg is not a instance of Message or ByteBuf");
         }
     }
 

@@ -1,8 +1,11 @@
 package common;
 
 import Client.bean.HostAndPort;
+import common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
+
+import java.util.Objects;
 
 public class Message implements ReferenceCounted {
     private short operationCode;
@@ -17,16 +20,17 @@ public class Message implements ReferenceCounted {
 
     public Message(short operationCode, HostAndPort hostAndPort, ByteBuf content) throws Exception{
         this.operationCode=operationCode;
-        this.content=content;
+        this.content= Objects.requireNonNull(content);
         if (hostAndPort==null){
             this.destination=null;
         }else {
             this.destination = getDestinationBytes(hostAndPort);
         }
     }
+
     public Message(short operationCode, byte[] destination, ByteBuf content) throws Exception{
         this.operationCode=operationCode;
-        this.content=content;
+        this.content=Objects.requireNonNull(content);;
         this.destination=destination;
     }
 

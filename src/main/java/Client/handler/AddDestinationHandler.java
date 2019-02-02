@@ -31,5 +31,7 @@ public class AddDestinationHandler extends MessageToByteEncoder<ByteBuf> {
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
         out.writeBytes(ctx.alloc().buffer(des.length).writeBytes(des));
         out.writeBytes(msg);
+        //卧槽查了半天 这里msg引用泄露了！
+        msg.release();
     }
 }

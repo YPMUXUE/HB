@@ -1,3 +1,5 @@
+import common.resource.ConnectionEvents;
+import config.StaticConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -25,7 +27,7 @@ public class ServerTest {
                         pipeline.addLast(new SoutChannelInboundHandler());
                     }
                 });
-        ChannelFuture future = bootstrap.bind(InetAddress.getLoopbackAddress(), 9002);
+        ChannelFuture future = bootstrap.bind(InetAddress.getLoopbackAddress(), StaticConfig.PROXY_SERVER_PORT);
         Channel serverChannel=future.channel();
         serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");
@@ -40,9 +42,12 @@ public class ServerTest {
     public static class SoutChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-//            byte[] buffer=new byte[msg.readableBytes()];
-//            msg.readBytes(buffer);
-//            System.out.println(new String(buffer));
+//            HttpResponse(ctx,msg);
+            System.out.println(ByteBufUtil.hexDump(msg));
+            ctx.channel().writeAndFlush(Unpooled.buffer().writeShort(ConnectionEvents.CONNECTION_ESTABLISH.getCode()).writeInt(0));
+            }
+
+        private void HttpResponse(ChannelHandlerContext ctx, ByteBuf msg) {
             System.out.println(msg.toString(StandardCharsets.UTF_8));
             String message="HTTP/1.1 200 OK\r\n" +
                     "Content-Type: application/json; charset=utf-8\r\n" +
@@ -50,6 +55,7 @@ public class ServerTest {
                     "{\"isLogin\":false,\"username\":\"\",\"userId\":\"\",\"timestamp\":1542701358812}\r\n";
             ctx.channel().write(Unpooled.buffer().writeBytes(new byte[]{(byte)0xCA,(byte)0xFE}).writeInt(message.getBytes(StandardCharsets.UTF_8).length));
             ctx.writeAndFlush(Unpooled.copiedBuffer(message, Charset.forName("utf-8")));
+
         }
     }
 }

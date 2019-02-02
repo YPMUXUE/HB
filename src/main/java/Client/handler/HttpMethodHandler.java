@@ -2,6 +2,7 @@ package Client.handler;
 
 import Client.bean.HostAndPort;
 import common.handler.SimpleTransferHandler;
+import common.handler.coder.MessageToByteBufOutboundHandler;
 import common.log.LogUtil;
 import common.resource.SystemConfig;
 import common.util.Connections;
@@ -47,16 +48,15 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
         Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
             if (channelFuture.isSuccess()){
                 LogUtil.info(()->("Proxy Server:"+ StaticConfig.PROXY_SERVER_ADDRESS +" connect success, bind address" + hostName));
-
-                channelToProxyServer.pipeline().addLast("Transfer",new ProxyTransferHandler(ctx.channel(),true, destination));
-
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
-                        .addLast("SimpleTransferHandler",new SimpleTransferHandler(channelToProxyServer,true))
+                        .addLast("ClientTransferHandler",new ClientTransferHandler(channelToProxyServer,true))
                         .addLast("ExceptionHandler",new ExceptionLoggerHandler("HttpMethodHandler"));
-                channelToProxyServer.writeAndFlush(Unpooled.EMPTY_BUFFER);
-            }else{
+
+                channelToProxyServer.pipeline().addLast("Transfer",new ProxyTransferHandler(ctx.channel(),true, destination));
+
+}else{
                 LogUtil.info(()->(hostName + "connect failed"));
                 ctx.channel().close();
             }
