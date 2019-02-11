@@ -5,6 +5,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
+@Deprecated
 public class AddHeaderHandler extends ChannelDuplexHandler {
     private static final byte[] heartBeat=new byte[]{(byte)0xCA,(byte)0xFE};
     private static final byte[] header=new byte[]{(byte)0x03,(byte)0x20};

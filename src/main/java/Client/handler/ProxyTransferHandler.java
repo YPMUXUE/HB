@@ -53,6 +53,7 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
                 ctx.channel().close();
                 return;
             }
+//            writePending();
             notifyTargetChannel(ctx,msg);
         }
     }

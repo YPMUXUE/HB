@@ -54,7 +54,6 @@ public class Connections {
                                 .addLast("ByteBufToMessageHandler",new ByteBufToMessageInboundHandler());
                         //outbound
                         ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());
-
                     }
                 });
         ChannelFuture future=bootstrap.connect(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT);

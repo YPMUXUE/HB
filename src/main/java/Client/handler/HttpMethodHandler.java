@@ -31,10 +31,10 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
 //            ctx.fireChannelRead(msg);
 //            return;
 //        }
-        if (HttpMethod.CONNECT.equals(msg.method())){
-            handleConnect(ctx,msg);
-        }else{
-            handleSimpleProxy(ctx,msg);
+        if (HttpMethod.CONNECT.equals(msg.method())) {
+            handleConnect(ctx, msg);
+        } else {
+            handleSimpleProxy(ctx, msg);
         }
     }
 
@@ -44,20 +44,21 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
 
     private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg) {
         String hostName = msg.uri();
-        HostAndPort destination=HostAndPort.resolve(msg);
-        Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
-            if (channelFuture.isSuccess()){
-                LogUtil.info(()->("Proxy Server:"+ StaticConfig.PROXY_SERVER_ADDRESS +" connect success, bind address" + hostName));
+        HostAndPort destination = HostAndPort.resolve(msg);
+        Connections.newConnectionToProxyServer(ctx.channel().eventLoop(), (channelFuture, channelToProxyServer) -> {
+            if (channelFuture.isSuccess()) {
+                LogUtil.info(() -> ("Proxy Server:" + StaticConfig.PROXY_SERVER_ADDRESS + " connect success, bind address" + hostName));
+
                 //删除所有RequestToClient下ChannelHandler
-                ctx.pipeline().forEach((entry)->ctx.pipeline().remove(entry.getKey()));
-                ctx.pipeline().addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
-                        .addLast("ClientTransferHandler",new ClientTransferHandler(channelToProxyServer,true))
-                        .addLast("ExceptionHandler",new ExceptionLoggerHandler("HttpMethodHandler"));
+                ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
+                ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
+                        .addLast("ClientTransferHandler", new ClientTransferHandler(channelToProxyServer, true))
+                        .addLast("ExceptionHandler", new ExceptionLoggerHandler("HttpMethodHandler"));
 
-                channelToProxyServer.pipeline().addLast("Transfer",new ProxyTransferHandler(ctx.channel(),true, destination));
+                channelToProxyServer.pipeline().addLast("Transfer", new ProxyTransferHandler(ctx.channel(), true, destination));
 
-}else{
-                LogUtil.info(()->(hostName + "connect failed"));
+            } else {
+                LogUtil.info(() -> (hostName + "connect failed"));
                 ctx.channel().close();
             }
         });

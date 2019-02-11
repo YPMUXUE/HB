@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
+@Deprecated
 public class AddDestinationHandler extends MessageToByteEncoder<ByteBuf> {
     private final byte[] des;
 
