@@ -31,10 +31,14 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
 //            ctx.fireChannelRead(msg);
 //            return;
 //        }
-        if (HttpMethod.CONNECT.equals(msg.method())) {
-            handleConnect(ctx, msg);
-        } else {
-            handleSimpleProxy(ctx, msg);
+        try {
+            if (HttpMethod.CONNECT.equals(msg.method())) {
+                handleConnect(ctx, msg);
+            } else {
+                handleSimpleProxy(ctx, msg);
+            }
+        }finally {
+            msg.release();
         }
     }
 

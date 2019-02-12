@@ -5,7 +5,6 @@ public enum  ConnectionEvents {
     ,CONNECTION_ESTABLISH(0xAC)
     ,CONNECT(0x1995)
     ,BIND(0x0320)
-
     ;
      ConnectionEvents(int code){
         this.code=(short) code;

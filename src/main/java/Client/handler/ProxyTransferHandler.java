@@ -16,7 +16,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.*;
 
 public class ProxyTransferHandler extends SimpleTransferHandler {
-    private BlockingQueue<PendingWriteItem> pendingWrite = new LinkedBlockingQueue<>();
+    private BlockingQueue<PendingWriteItem> pendingWrite = null;
     private boolean connectFinished = false;
     private boolean isInitialized = false;
     private final HostAndPort hostAndPort;
@@ -51,9 +51,10 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
                 LogUtil.info(()->"connect to proxy server error result:"+e.toString());
                 ReferenceCountUtil.release(msg);
                 ctx.channel().close();
+                targetChannel.close();
                 return;
             }
-//            writePending();
+            writePendingDataLater(ctx);
             notifyTargetChannel(ctx,msg);
         }
     }
@@ -94,19 +95,27 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (connectFinished) {
-            if (pendingWrite != null && pendingWrite.size() > 0) {
-                for (int i = pendingWrite.size() - 1; i >= 0; i--) {
-                    PendingWriteItem item = pendingWrite.poll();
-                    if (item != null) {
-                        ctx.write(item.data, item.promise);
-                    }
-                }
-                pendingWrite = null;
-            }
+            writePendingData(ctx);
             this.write0(ctx, msg, promise);
         } else {
             pendingWrite.put(new PendingWriteItem(msg, promise));
         }
+    }
+
+    private void writePendingData(ChannelHandlerContext ctx){
+        if (pendingWrite != null && pendingWrite.size() > 0) {
+            for (int i = pendingWrite.size() - 1; i >= 0; i--) {
+                PendingWriteItem item = pendingWrite.poll();
+                if (item != null) {
+                    ctx.write(item.data, item.promise);
+                }
+            }
+            pendingWrite = null;
+        }
+    }
+
+    private void writePendingDataLater(ChannelHandlerContext ctx) {
+        ctx.executor().execute(()-> writePendingData(ctx));
     }
 
     private void write0(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

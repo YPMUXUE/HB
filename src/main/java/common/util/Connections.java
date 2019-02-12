@@ -7,7 +7,6 @@ import config.StaticConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.concurrent.Future;
 import common.resource.SystemConfig;
 
@@ -50,7 +49,7 @@ public class Connections {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         //inbound
-                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",HandlerHelper.getDefaultFrameDecoderInstance())
+                        ch.pipeline().addLast("LengthFieldBasedFrameDecoder",HandlerHelper.newDefaultFrameDecoderInstance())
                                 .addLast("ByteBufToMessageHandler",new ByteBufToMessageInboundHandler());
                         //outbound
                         ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());

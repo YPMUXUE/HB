@@ -14,6 +14,7 @@ public class Message implements ReferenceCounted {
     private int contentLength;
     private ByteBuf content;
 
+    @Deprecated
     public void setContentLength(int contentLength) {
         this.contentLength = contentLength;
     }
@@ -28,9 +29,9 @@ public class Message implements ReferenceCounted {
         }
     }
 
-    public Message(short operationCode, byte[] destination, ByteBuf content) throws Exception{
+    public Message(short operationCode, byte[] destination, ByteBuf content){
         this.operationCode=operationCode;
-        this.content=Objects.requireNonNull(content);;
+        this.content=Objects.requireNonNull(content);
         this.destination=destination;
     }
 
@@ -53,15 +54,6 @@ public class Message implements ReferenceCounted {
 
     }
 
-    public static Message resloveRequest(ByteBuf msg){
-        Message m=new Message();
-        m.operationCode=msg.readShort();
-        m.contentLength =msg.readInt();
-        m.destination=new byte[6];
-        msg.readBytes(m.destination);
-        m.content=msg;
-        return m;
-    }
     private byte[] getDestinationBytes(HostAndPort hostAndPort) throws Exception {
         byte[] host = hostAndPort.getHost().getAddress();
         int iport = hostAndPort.getPort();
