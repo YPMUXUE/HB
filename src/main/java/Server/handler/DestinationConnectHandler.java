@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+@Deprecated
 public class DestinationConnectHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private byte[] destinationCache;
     private volatile Channel connectToServerChannel;

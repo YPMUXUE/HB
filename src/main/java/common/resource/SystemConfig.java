@@ -3,8 +3,6 @@ package common.resource;
 public class SystemConfig {
     public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
     public static final int timeout=120;
-    public static final int OPEN_CONNECTION=0x0320;
-    public static final int ONE_OFF_CONNECTION=0x1995;
-    public static final int NEW_KEEP_CONNECTION=0xcafe;
-    public static final int SIMPLE_MESSAGE=0x1234;
+    public static final int SUCCESS=1;
+    public static final int FAILED=0;
 }

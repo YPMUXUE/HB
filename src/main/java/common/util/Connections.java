@@ -17,7 +17,7 @@ import java.util.function.BiConsumer;
 public class Connections {
     private static final Bootstrap defaultBootstrap=new Bootstrap();
     public static ChannelFuture newConnectionToServer(EventLoop eventLoop, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
-        Bootstrap bootstrap = new Bootstrap();
+        Bootstrap bootstrap = defaultBootstrap.clone();
         bootstrap.group(eventLoop)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<Channel>() {
@@ -30,9 +30,9 @@ public class Connections {
         Channel channelToServer=future.channel();
         future.addListener((f)->{
             if (f.isSuccess()){
-                channelConsumer.accept(1,channelToServer);
+                channelConsumer.accept(SystemConfig.SUCCESS,channelToServer);
             }else{
-                channelConsumer.accept(0,channelToServer);
+                channelConsumer.accept(SystemConfig.FAILED,channelToServer);
             }
         });
         return future;

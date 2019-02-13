@@ -67,9 +67,4 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
             }
         });
     }
-
-    private boolean msgInterested(FullHttpRequest msg) {
-        return HttpMethod.CONNECT.equals(msg.method());
-    }
-
 }

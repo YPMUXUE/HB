@@ -142,6 +142,7 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
         if (result == ConnectionEvents.CONNECTION_ESTABLISH.getCode()) {
             connectFinished = true;
         } else {
+            //todo 可以添加一个连接权限认证逻辑
             throw new RuntimeException("the response code of initializeRQ is not CONNECTION_ESTABLISH : " + result);
         }
     }
