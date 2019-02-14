@@ -7,4 +7,5 @@
                   connect     (request/response)普通数据包
                   bind        (request)建立远程连接请求包
                   connection_establish (response) 响应包，对应bind成功的响应
+                  connection_establish_failed
 
