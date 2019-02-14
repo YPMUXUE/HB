@@ -6,6 +6,7 @@ import common.log.LogUtil;
 import common.resource.ConnectionEvents;
 import common.resource.SystemConfig;
 import common.util.Connections;
+import common.util.MessageUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 
@@ -36,7 +37,11 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleConnect(ChannelHandlerContext ctx, Message m) {
-
+        if (channelToServer == null || !channelToServer.isActive()){
+            ctx.channel().close();
+        }else {
+            ctx.fireChannelRead(MessageUtil.MessageToByteBuf(m,ctx));
+        }
     }
 
     private void handleBind(ChannelHandlerContext ctx, Message m) throws Exception {
