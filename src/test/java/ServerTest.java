@@ -1,5 +1,5 @@
 import common.resource.ConnectionEvents;
-import config.StaticConfig;
+import common.resource.StaticConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -7,7 +7,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -27,7 +26,7 @@ public class ServerTest {
                         pipeline.addLast(new SoutChannelInboundHandler());
                     }
                 });
-        ChannelFuture future = bootstrap.bind(InetAddress.getLoopbackAddress(), StaticConfig.PROXY_SERVER_PORT);
+        ChannelFuture future = bootstrap.bind(InetAddress.getLoopbackAddress(), 4449);
         Channel serverChannel=future.channel();
         serverChannel.closeFuture().addListener((f) -> {
             System.out.println("server stop");

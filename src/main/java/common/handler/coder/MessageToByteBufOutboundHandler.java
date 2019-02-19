@@ -1,6 +1,7 @@
 package common.handler.coder;
 
 import common.Message;
+import common.log.LogUtil;
 import common.util.MessageUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,7 +18,8 @@ public class MessageToByteBufOutboundHandler extends ChannelOutboundHandlerAdapt
             ((Message) msg).release();
             ctx.writeAndFlush(buf);
         }else {
-            super.write(ctx, msg, promise);
+            LogUtil.error(()->"msg is not a instance of Message");
+            throw new RuntimeException("msg is not a instance of Message;"+msg.toString());
         }
     }
 }

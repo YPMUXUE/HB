@@ -20,4 +20,7 @@ public class LogUtil {
         }
     }
 
+    public static void error(Supplier<String> s) {
+        info(s);
+    }
 }

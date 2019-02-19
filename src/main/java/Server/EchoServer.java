@@ -10,6 +10,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 public class EchoServer {
     public static void main(String[] args) throws Exception {
@@ -24,7 +26,8 @@ public class EchoServer {
                     }
                 });
         InetAddress localAddr=InetAddress.getLocalHost();
-        ChannelFuture future = serverBootstrap.bind(localAddr, 5559);
+        SocketAddress address=new InetSocketAddress(InetAddress.getLoopbackAddress(),4449);
+        ChannelFuture future = serverBootstrap.bind(address);
         future.syncUninterruptibly();
     }
 }

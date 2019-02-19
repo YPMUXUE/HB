@@ -2,11 +2,9 @@ package common.util;
 
 import common.Message;
 import common.resource.ConnectionEvents;
-import config.StaticConfig;
+import common.resource.StaticConfig;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
-import java.util.HashSet;
 
 public class MessageUtil {
     public static ByteBuf MessageToByteBuf(Message m, ChannelHandlerContext ctx) {

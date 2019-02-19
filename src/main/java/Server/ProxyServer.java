@@ -1,11 +1,11 @@
 package Server;
 
+import Server.handler.DestinationProxyHandler;
 import common.handler.EventLoggerHandler;
 import common.handler.ReadWriteTimeoutHandler;
 import common.handler.coder.ByteBufToMessageInboundHandler;
 import common.handler.coder.MessageToByteBufOutboundHandler;
 import common.log.LogUtil;
-import Server.handler.DestinationConnectHandler;
 import Server.handler.HeaderIdentifyHandler;
 import common.util.HandlerHelper;
 import io.netty.bootstrap.ServerBootstrap;
@@ -15,22 +15,23 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import common.resource.SystemConfig;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 public class ProxyServer {
     static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     protected Channel serverChannel;
 
-    public ProxyServer(int port, ChannelInitializer channelInitializer) throws Exception {
+    public ProxyServer(SocketAddress address, ChannelInitializer channelInitializer) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer);
-        InetAddress localAddr = InetAddress.getLocalHost();
-        ChannelFuture future = bootstrap.bind(localAddr, port);
+        ChannelFuture future = bootstrap.bind(address);
         future.addListener(f -> {
             if (f.isSuccess()) {
-                LogUtil.info(() -> localAddr.toString() + "success bind on port " + port);
+                LogUtil.info(() -> address.toString() + "bind success");
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> serverChannel.close().syncUninterruptibly()));
             }
         });
@@ -40,7 +41,7 @@ public class ProxyServer {
 
 
     public static void main(String[] args) throws Exception {
-        ProxyServer proxyServer = new ProxyServer(9002, new ChannelInitializer() {
+        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(InetAddress.getLoopbackAddress(),9002), new ChannelInitializer() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
@@ -56,7 +57,7 @@ public class ProxyServer {
                         .addLast("ByteBufToMessageInboundHandler", new ByteBufToMessageInboundHandler())
                         .addLast("MessageToByteBufOutboundHandler", new MessageToByteBufOutboundHandler())
                         .addLast("HeaderIdentifyHandler", new HeaderIdentifyHandler())
-                        .addLast("DestinationConnectHandler", new DestinationConnectHandler())
+                        .addLast("DestinationProxyHandler", new DestinationProxyHandler())
                         .addLast("EventLoggerHandler", new EventLoggerHandler((ctx, cause) -> "EventLoggerHandler:ProxyServer " + ctx.channel().toString() + ":" + cause.toString()));
             }
         });

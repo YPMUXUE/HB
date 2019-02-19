@@ -7,6 +7,7 @@ import common.resource.ConnectionEvents;
 import common.resource.SystemConfig;
 import common.util.Connections;
 import common.util.MessageUtil;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 
@@ -14,10 +15,16 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
+public class DestinationProxyHandler extends ChannelDuplexHandler {
 
-    private Channel channelToServer;
-    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
+    private Channel targetChannel;
+    private final boolean closeTargetChannel;
+//    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
+
+    public DestinationProxyHandler() {
+        this.closeTargetChannel=true;
+        this.targetChannel = null;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -37,10 +44,11 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleConnect(ChannelHandlerContext ctx, Message m) {
-        if (channelToServer == null || !channelToServer.isActive()){
+        if (targetChannel == null || !targetChannel.isActive()){
             ctx.channel().close();
+            m.release();
         }else {
-            ctx.fireChannelRead(MessageUtil.MessageToByteBuf(m,ctx));
+            targetChannel.writeAndFlush(m.getContent());
         }
     }
 
@@ -53,7 +61,7 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
                     if (status==SystemConfig.SUCCESS){
                         channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel()));
 
-                        ctx.pipeline().addAfter(ctx.name(),Proxy_Transfer_Name,new SimpleTransferHandler(channelToServer,true));
+//                        ctx.pipeline().addAfter(ctx.name(),Proxy_Transfer_Name,new SimpleTransferHandler(channelToServer,true));
                         ctx.writeAndFlush(new Message(ConnectionEvents.CONNECTION_ESTABLISH.getCode(), (byte[]) null, Unpooled.EMPTY_BUFFER))
                                 .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                     }else{
@@ -62,25 +70,39 @@ public class DestinationProxyHandler extends ChannelInboundHandlerAdapter {
                                 .addListener(ChannelFutureListener.CLOSE);
                     }
                 });
-        this.channelToServer=channelFuture.channel();
+        this.targetChannel =channelFuture.channel();
     }
 
     private void removeOldConnection(ChannelHandlerContext ctx, Message m) {
-        if (this.channelToServer !=null){
-            this.channelToServer.close();
-            this.channelToServer=null;
+        if (this.targetChannel !=null){
+            this.targetChannel.close();
+            this.targetChannel =null;
         }
-        boolean flag=false;
-        for (Map.Entry<String, ChannelHandler> stringChannelHandlerEntry : ctx.pipeline()) {
-            if (stringChannelHandlerEntry.getKey().equals(Proxy_Transfer_Name)){
-                flag=true;
-                break;
-            }
-        }
-        if (flag){
-            ctx.pipeline().remove(Proxy_Transfer_Name);
-        }
+//        boolean flag=false;
+//        for (Map.Entry<String, ChannelHandler> stringChannelHandlerEntry : ctx.pipeline()) {
+//            if (stringChannelHandlerEntry.getKey().equals(Proxy_Transfer_Name)){
+//                flag=true;
+//                break;
+//            }
+//        }
+//        if (flag){
+//            ctx.pipeline().remove(Proxy_Transfer_Name);
+//        }
     }
 
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof ByteBuf){
+            msg=new Message(ConnectionEvents.CONNECT.getCode(),(byte[])null,(ByteBuf) msg);
+        }
+        super.write(ctx, msg, promise);
+    }
 
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (closeTargetChannel) {
+            targetChannel.close();
+        }
+        super.close(ctx,promise);
+    }
 }

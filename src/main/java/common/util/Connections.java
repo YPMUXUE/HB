@@ -3,7 +3,7 @@ package common.util;
 import common.handler.ReadWriteTimeoutHandler;
 import common.handler.coder.ByteBufToMessageInboundHandler;
 import common.handler.coder.MessageToByteBufOutboundHandler;
-import config.StaticConfig;
+import common.resource.StaticConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;

@@ -1,9 +1,7 @@
 package common.handler.coder;
 
 import common.Message;
-import common.resource.ConnectionEvents;
 import common.util.MessageUtil;
-import config.StaticConfig;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
