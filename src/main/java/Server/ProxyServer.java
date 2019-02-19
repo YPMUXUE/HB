@@ -45,13 +45,6 @@ public class ProxyServer {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-//                pipeline.addLast("LengthFieldBasedFrameDecoder", HandlerHelper.newDefaultFrameDecoderInstance())
-//                        .addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(SystemConfig.timeout))
-//                        .addLast("HeaderIdentifyHandler",new HeaderIdentifyHandler())
-//                        .addLast("DestinationConnectHandler",new DestinationConnectHandler())
-//                .addLast("EventLoggerHandler",new EventLoggerHandler((ctx, cause)->"EventLoggerHandler:ProxyServer "+ctx.channel().toString()+":"+cause.toString()));
-//            }
-//        });
                 pipeline.addLast("LengthFieldBasedFrameDecoder", HandlerHelper.newDefaultFrameDecoderInstance())
                         .addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(SystemConfig.timeout))
                         .addLast("ByteBufToMessageInboundHandler", new ByteBufToMessageInboundHandler())
