@@ -41,7 +41,7 @@ public class ProxyServer {
 
 
     public static void main(String[] args) throws Exception {
-        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(InetAddress.getLoopbackAddress(),9002), new ChannelInitializer() {
+        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(InetAddress.getLocalHost(),9002), new ChannelInitializer() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
