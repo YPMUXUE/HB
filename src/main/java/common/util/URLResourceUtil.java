@@ -15,6 +15,6 @@ return null;
     }
 
     public static void main(String[] args) {
-        getCurrentClassPath();
+        System.out.println(URLResourceUtil.class.getResource("/"));
     }
 }

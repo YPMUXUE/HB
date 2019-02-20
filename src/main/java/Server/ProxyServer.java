@@ -58,6 +58,5 @@ public class ProxyServer {
             System.out.println("server stop");
             eventLoopGroup.shutdownGracefully();
         });
-
     }
 }

@@ -6,14 +6,12 @@ import common.log.LogUtil;
 import common.resource.ConnectionEvents;
 import common.resource.SystemConfig;
 import common.util.Connections;
-import common.util.MessageUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Map;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
@@ -33,13 +31,14 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
             int operationCode=m.getOperationCode();
             if (operationCode == ConnectionEvents.BIND.getCode()){
                 handleBind(ctx,m);
+                m.release();
             }else if(operationCode == ConnectionEvents.CONNECT.getCode()) {
                 handleConnect(ctx,m);
             }else{
                 throw new Exception("a unsupported header :"+operationCode);
             }
         }else {
-            ctx.fireChannelRead(msg);
+            throw new RuntimeException("DestinationProxyHandler#channelRead: the msg is not a instance of Message");
         }
     }
 
@@ -48,7 +47,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
             ctx.channel().close();
             m.release();
         }else {
-            targetChannel.writeAndFlush(m.getContent());
+            targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOG_FUTURE_CLOSE_ON_FAILED);
         }
     }
 
@@ -61,6 +60,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
                     if (status==SystemConfig.SUCCESS){
                         channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel()));
 
+                        LogUtil.info(()->channelToServer.toString()+" connect success");
 //                        ctx.pipeline().addAfter(ctx.name(),Proxy_Transfer_Name,new SimpleTransferHandler(channelToServer,true));
                         ctx.writeAndFlush(new Message(ConnectionEvents.CONNECTION_ESTABLISH.getCode(), (byte[]) null, Unpooled.EMPTY_BUFFER))
                                 .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);

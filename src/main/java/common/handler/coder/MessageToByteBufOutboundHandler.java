@@ -15,7 +15,7 @@ public class MessageToByteBufOutboundHandler extends ChannelOutboundHandlerAdapt
         if (msg instanceof Message){
             Message m=(Message)msg;
             ByteBuf buf= MessageUtil.MessageToByteBuf(m,ctx);
-            ((Message) msg).release();
+            m.release();
             ctx.writeAndFlush(buf);
         }else {
             LogUtil.error(()->"msg is not a instance of Message");

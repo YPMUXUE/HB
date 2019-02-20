@@ -23,6 +23,12 @@
                 <runAs>Client.ProxyClient</runAs>
             </properties>
         </profile>
+        <profile>
+            <id>test</id>
+            <properties>
+                <runAs>common.util.URLResourceUtil</runAs>
+            </properties>
+        </profile>
     </profiles>
     <build>
         <plugins>
