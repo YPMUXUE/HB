@@ -24,6 +24,11 @@ public class EchoServer {
                         System.out.println(ByteBufUtil.hexDump((ByteBuf) msg));
                         super.channelRead(ctx,msg);
                     }
+
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        super.channelActive(ctx);
+                    }
                 });
         InetAddress localAddr=InetAddress.getLocalHost();
         SocketAddress address=new InetSocketAddress(InetAddress.getLoopbackAddress(),4449);

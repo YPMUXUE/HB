@@ -44,10 +44,10 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
     private void handleConnect(ChannelHandlerContext ctx, Message m) {
         if (targetChannel == null || !targetChannel.isActive()){
-            ctx.channel().close();
+            ctx.channel().close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
             m.release();
         }else {
-            targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOG_FUTURE_CLOSE_ON_FAILED);
+            targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
         }
     }
 
@@ -60,12 +60,12 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
                     if (status==SystemConfig.SUCCESS){
                         channelToServer.pipeline().addLast("ConnectionToServer*transfer",new SimpleTransferHandler(ctx.channel()));
 
-                        LogUtil.info(()->channelToServer.toString()+" connect success");
+                        LogUtil.info(()->channelToServer+" connect success");
 //                        ctx.pipeline().addAfter(ctx.name(),Proxy_Transfer_Name,new SimpleTransferHandler(channelToServer,true));
                         ctx.writeAndFlush(new Message(ConnectionEvents.CONNECTION_ESTABLISH.getCode(), (byte[]) null, Unpooled.EMPTY_BUFFER))
                                 .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                     }else{
-                        LogUtil.info(()->channelToServer.toString()+" connect failed");
+                        LogUtil.info(()->channelToServer+" connect failed");
                         ctx.writeAndFlush(new Message(ConnectionEvents.CONNECTION_ESTABLISH_FAILED.getCode(),(byte[]) null,Unpooled.EMPTY_BUFFER))
                                 .addListener(ChannelFutureListener.CLOSE);
                     }
@@ -100,8 +100,8 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (closeTargetChannel) {
-            targetChannel.close();
+        if (closeTargetChannel && targetChannel != null) {
+            targetChannel.close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
         }
         super.close(ctx,promise);
     }

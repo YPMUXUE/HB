@@ -51,7 +51,7 @@ public class ProxyServer {
                         .addLast("MessageToByteBufOutboundHandler", new MessageToByteBufOutboundHandler())
                         .addLast("HeaderIdentifyHandler", new HeaderIdentifyHandler())
                         .addLast("DestinationProxyHandler", new DestinationProxyHandler())
-                        .addLast("EventLoggerHandler", new EventLoggerHandler((ctx, cause) -> "EventLoggerHandler:ProxyServer " + ctx.channel().toString() + ":" + cause.toString()));
+                        .addLast("EventLoggerHandler", new EventLoggerHandler((ctx, cause) -> "EventLoggerHandler:ProxyServer " + ctx.channel() + ":" + LogUtil.stackTraceToString(cause)));
             }
         });
         proxyServer.serverChannel.closeFuture().addListener((f) -> {

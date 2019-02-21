@@ -19,7 +19,7 @@ public class MessageToByteBufOutboundHandler extends ChannelOutboundHandlerAdapt
             ctx.writeAndFlush(buf);
         }else {
             LogUtil.error(()->"msg is not a instance of Message");
-            throw new RuntimeException("msg is not a instance of Message;"+msg.toString());
+            throw new RuntimeException("msg is not a instance of Message;"+msg);
         }
     }
 }

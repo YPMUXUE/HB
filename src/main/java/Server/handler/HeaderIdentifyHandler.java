@@ -18,9 +18,7 @@ public class HeaderIdentifyHandler extends ChannelInboundHandlerAdapter {
             int operationCode = m.getOperationCode();
             if (!operationCodeRegistered(operationCode)) {
                 String remoteAddress = ctx.channel().remoteAddress().toString();
-                LogUtil.error(() -> "unregistered connection : remote IP:" + remoteAddress);
-                ctx.channel().close();
-                return;
+                throw new RuntimeException("unregistered connection : remote IP:" + remoteAddress);
             }
             ctx.fireChannelRead(msg);
         } else {

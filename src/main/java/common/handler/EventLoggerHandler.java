@@ -16,12 +16,13 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LogUtil.info(()->exceptionHandler.apply(ctx,cause));
-        ctx.channel().close();
+        ctx.channel().close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        LogUtil.info(()->ctx.channel().toString()+ "closed.");
+        LogUtil.info(()->ctx.channel()+ "closed.");
+        promise.addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
         super.close(ctx, promise);
     }
 }

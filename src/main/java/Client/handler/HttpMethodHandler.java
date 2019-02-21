@@ -14,11 +14,12 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final static ByteBuf CONNECT_RESPONSE_OK = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
+    private final static String clientTransferHandler ="ClientTransferHandler";
+    private final static String proxyTransferHandler="ProxyTransferHandler";
 
     public HttpMethodHandler() {
     }
@@ -56,10 +57,10 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
-                        .addLast("ClientTransferHandler", new ClientTransferHandler(channelToProxyServer, true))
+                        .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true))
                         .addLast("ExceptionHandler", new ExceptionLoggerHandler("HttpMethodHandler"));
 
-                channelToProxyServer.pipeline().addLast("Transfer", new ProxyTransferHandler(ctx.channel(), true, destination));
+                channelToProxyServer.pipeline().addLast(proxyTransferHandler, new ProxyTransferHandler(ctx.channel(), true, destination));
 
             } else {
                 LogUtil.info(() -> (hostName + "connect failed"));

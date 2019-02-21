@@ -13,6 +13,8 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
 public class ProxyClient {
@@ -21,12 +23,12 @@ public class ProxyClient {
 
     protected Channel serverChannel;
 
-    public ProxyClient(String host, int port, ChannelInitializer channelInitializer) throws Exception {
+    public ProxyClient(SocketAddress address, ChannelInitializer channelInitializer) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer);
-        ChannelFuture future = bootstrap.bind(InetAddress.getByName(host), port);
+        ChannelFuture future = bootstrap.bind(address);
         future.addListener(f->{
             if (f.isSuccess()){
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -39,7 +41,8 @@ public class ProxyClient {
     }
 
     public static void main(String[] args) throws Exception {
-        ProxyClient proxyClient=new ProxyClient("localhost", 9001, new ChannelInitializer<Channel>() {
+        InetSocketAddress address=new InetSocketAddress(InetAddress.getLoopbackAddress(),9001);
+        ProxyClient proxyClient=new ProxyClient(address, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();

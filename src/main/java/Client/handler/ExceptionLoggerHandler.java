@@ -4,6 +4,7 @@ import common.log.LogUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -21,6 +22,14 @@ public class ExceptionLoggerHandler extends ChannelInboundHandlerAdapter {
     private String stackTraceToString(Throwable e){
         StringWriter errorsWriter = new StringWriter();
         e.printStackTrace(new PrintWriter(errorsWriter));
-        return errorsWriter.toString();
+        try{
+            return errorsWriter.toString();
+        }finally {
+            try {
+                errorsWriter.close();
+            } catch (IOException e1) {
+                //ignore
+            }
+        }
     }
 }
