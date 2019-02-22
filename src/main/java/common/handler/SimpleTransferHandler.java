@@ -22,7 +22,7 @@ public class SimpleTransferHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        LogUtil.debug(()->(((ByteBuf)msg).toString(Charset.forName("utf-8"))));
+//        LogUtil.debug(()->(((ByteBuf)msg).toString(Charset.forName("utf-8"))));
         targetChannel.writeAndFlush(msg);
     }
 
@@ -38,7 +38,7 @@ public class SimpleTransferHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (closeTargetChannel) {
+        if (targetChannel!=null && closeTargetChannel) {
             targetChannel.close();
         }
         super.close(ctx,promise);

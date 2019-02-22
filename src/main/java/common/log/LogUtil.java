@@ -8,24 +8,33 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Objects;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 public class LogUtil {
     private final static PrintStream logger;
     private static final boolean DEBUG;
-    public static final ChannelFutureListener LOGGER_ON_FAILED_CLOSE;
-    static {
-        LOGGER_ON_FAILED_CLOSE =new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()){
+    public static final ChannelFutureListener LOGGER_ON_FAILED_CLOSE=new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()){
 
-                }else{
-                    LogUtil.error(()->"channel:"+ future.channel() +"cause:"+stackTraceToString(future.cause()));
-                    future.channel().close();
-                }
+            }else{
+                LogUtil.error(()->"channel:"+ future.channel() +"cause:"+stackTraceToString(future.cause()));
+                future.channel().close();
             }
-        };
+        }
+    };
+
+    public static final ChannelFutureListener LOG_IF_FAILED =new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()){
+                LogUtil.error(()->"channel:"+ future.channel() +"result:"+stackTraceToString(future.cause()));
+            }
+        }
+    };
+    static {
 //        File logFile=new File("/HB/log/logFile");
 //        PrintStream logStream;
 //        try {
@@ -36,7 +45,10 @@ public class LogUtil {
 //            logStream=System.out;
 //            logStream.println("using system.out");
 //        }
-        logger= System.out;
+        {
+            logger = System.out;
+            System.setErr(logger);
+        }
     }
 
     static {DEBUG=Boolean.valueOf(System.getProperty("debug","false"));}

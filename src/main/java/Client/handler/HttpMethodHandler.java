@@ -1,19 +1,17 @@
 package Client.handler;
 
 import Client.bean.HostAndPort;
+import common.handler.EventLoggerHandler;
 import common.log.LogUtil;
 import common.resource.SystemConfig;
 import common.util.Connections;
 import common.resource.StaticConfig;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
-import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
 public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -26,10 +24,6 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
         LogUtil.debug(msg::toString);
-//        if(!msgInterested(msg)){
-//            ctx.fireChannelRead(msg);
-//            return;
-//        }
         try {
             if (HttpMethod.CONNECT.equals(msg.method())) {
                 handleConnect(ctx, msg);
@@ -37,7 +31,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 handleSimpleProxy(ctx, msg);
             }
         }finally {
-//            这里不需要释放，SimpleChannelInboundHandler里有释放操作
+//            这里不需要释放，SimpleChannelInboundHandler里有释放操作 巨坑注意
 //            msg.release();
         }
     }
@@ -57,13 +51,12 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
                         .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true))
-                        .addLast("ExceptionHandler", new ExceptionLoggerHandler("HttpMethodHandler"));
+                        .addLast("EventLoggerHandler", new EventLoggerHandler((context,cause)->"ClientToProxyServer:" + EventLoggerHandler.DEFAULT_HANDLER.apply(context,cause)));
 
                 channelToProxyServer.pipeline().addLast(proxyTransferHandler, new ProxyTransferHandler(ctx.channel(), true, destination));
-
             } else {
                 LogUtil.info(() -> (hostName + "connect failed"));
-                ctx.channel().close();
+                ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
             }
         });
     }

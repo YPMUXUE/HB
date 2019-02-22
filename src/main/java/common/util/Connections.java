@@ -1,5 +1,6 @@
 package common.util;
 
+import common.handler.EventLoggerHandler;
 import common.handler.ReadWriteTimeoutHandler;
 import common.handler.coder.ByteBufToMessageInboundHandler;
 import common.handler.coder.MessageToByteBufOutboundHandler;
@@ -53,6 +54,8 @@ public class Connections {
                                 .addLast("ByteBufToMessageHandler",new ByteBufToMessageInboundHandler());
                         //outbound
                         ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());
+                        //log
+                        ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler(false));
                     }
                 });
         ChannelFuture future=bootstrap.connect(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT);

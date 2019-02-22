@@ -16,6 +16,6 @@ public class ReadWriteTimeoutHandler extends IdleStateHandler {
     @Override
     protected void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
             LogUtil.info(() -> evt.state().name() + " triggered. start to close channel:" + ctx.channel().toString());
-            ctx.channel().close();
+            ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
     }
 }
