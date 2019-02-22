@@ -26,17 +26,17 @@ public class LogUtil {
                 }
             }
         };
-        File logFile=new File("/HB/log/logFile");
-        PrintStream logStream;
-        try {
-            logFile.getParentFile().mkdirs();
-            logFile.createNewFile();
-            logStream = new PrintStream(logFile, "utf-8");
-        }catch (Exception e){
-            logStream=System.out;
-            logStream.println("using system.out");
-        }
-        logger=logStream;
+//        File logFile=new File("/HB/log/logFile");
+//        PrintStream logStream;
+//        try {
+//            logFile.getParentFile().mkdirs();
+//            logFile.createNewFile();
+//            logStream = new PrintStream(logFile, "utf-8");
+//        }catch (Exception e){
+//            logStream=System.out;
+//            logStream.println("using system.out");
+//        }
+        logger= System.out;
     }
 
     static {DEBUG=Boolean.valueOf(System.getProperty("debug","false"));}

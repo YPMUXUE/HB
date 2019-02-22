@@ -2,20 +2,20 @@ package common.util;
 
 import common.Message;
 import common.resource.ConnectionEvents;
-import common.resource.StaticConfig;
+import common.resource.SystemConfig;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 public class MessageUtil {
     public static ByteBuf MessageToByteBuf(Message m, ChannelHandlerContext ctx) {
-        int bufferSize = StaticConfig.HEADER_LENGTH + StaticConfig.LENGTH_HEADER_LENGTH + m.getContent().readableBytes();
+        int bufferSize = SystemConfig.HEADER_LENGTH + SystemConfig.LENGTH_HEADER_LENGTH + m.getContent().readableBytes();
         if (m.getDestination() != null && m.getDestination().length > 0 && m.getOperationCode() == ConnectionEvents.BIND.getCode()) {
             bufferSize = bufferSize + m.getDestination().length;
             ByteBuf out = ctx.alloc().buffer(bufferSize);
             //write operationCode
             out.writeShort(m.getOperationCode());
             //write length Header
-            out.writeInt(m.getContent().readableBytes() + StaticConfig.IP_ADDRESS_LENGTH + StaticConfig.IP_PORT_LENGTH);
+            out.writeInt(m.getContent().readableBytes() + SystemConfig.IP_ADDRESS_LENGTH + SystemConfig.IP_PORT_LENGTH);
             //write Destination
             out.writeBytes(m.getDestination());
             //write Content
@@ -37,7 +37,7 @@ public class MessageUtil {
         short operationCode=buf.readShort();
         int length=buf.readInt();
         if (operationCode == ConnectionEvents.BIND.getCode()){
-            byte[] des=new byte[StaticConfig.DESTINATION_LENGTH];
+            byte[] des=new byte[SystemConfig.DESTINATION_LENGTH];
             buf.readBytes(des);
             return new Message(operationCode,des,buf);
         }else{

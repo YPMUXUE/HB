@@ -4,6 +4,7 @@ import Client.bean.HostAndPort;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 
+@Deprecated
 public class RequestResolveUtil {
     public static HostAndPort resolveRequest(FullHttpRequest req) throws Exception{
         if (HttpMethod.CONNECT.equals(req.method())){

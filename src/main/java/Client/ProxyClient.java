@@ -2,6 +2,7 @@ package Client;
 
 import Client.handler.HttpMethodHandler;
 import Client.handler.ExceptionLoggerHandler;
+import common.log.LogUtil;
 import common.resource.SystemConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -18,12 +19,11 @@ import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
 public class ProxyClient {
-    public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
     public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     protected Channel serverChannel;
 
-    public ProxyClient(SocketAddress address, ChannelInitializer channelInitializer) throws Exception {
+    public ProxyClient(final SocketAddress address, ChannelInitializer channelInitializer) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioServerSocketChannel.class)
@@ -31,9 +31,12 @@ public class ProxyClient {
         ChannelFuture future = bootstrap.bind(address);
         future.addListener(f->{
             if (f.isSuccess()){
+                LogUtil.info(()->"start success on" + address);
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     serverChannel.close().syncUninterruptibly();
                 }));
+            }else{
+                LogUtil.info(()->LogUtil.stackTraceToString(future.cause()));
             }
         });
         future.syncUninterruptibly();

@@ -17,7 +17,6 @@ import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
 public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
-    private final static ByteBuf CONNECT_RESPONSE_OK = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
     private final static String clientTransferHandler ="ClientTransferHandler";
     private final static String proxyTransferHandler="ProxyTransferHandler";
 
