@@ -61,7 +61,6 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
 
     private void notifyTargetChannel(ChannelHandlerContext ctx, Object msg) {
             targetChannel.writeAndFlush(msg);
-
     }
 
     @Override
@@ -74,6 +73,17 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
             ctx.writeAndFlush(message);
         }
         super.channelActive(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (isInitialized){
+            if (pendingWrite == null) {
+                pendingWrite = new LinkedBlockingQueue<>();
+            } else {
+                pendingWrite.clear();
+            }
+        }
     }
 
     @Override
