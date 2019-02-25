@@ -1,11 +1,13 @@
 package Client.handler;
 
 import Client.bean.HostAndPort;
+import common.Message;
 import common.handler.EventLoggerHandler;
 import common.log.LogUtil;
 import common.resource.SystemConfig;
 import common.util.Connections;
 import common.resource.StaticConfig;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -37,7 +39,16 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
     }
 
     private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg) {
-//        msg.
+        String hostName=msg.uri();
+        HostAndPort destination = HostAndPort.resolve(msg);
+        System.out.println(msg.retain().duplicate().toString());
+        System.out.println("\r\n\r\n");
+        System.out.println(ByteBufUtil.hexDump(msg.content()));
+        msg.release();
+//        Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
+//
+//        });
+
     }
 
     private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg) {
@@ -50,7 +61,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
-                        .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true))
+                        .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true, ClientTransferHandler.HTTPS_PROCESSOR))
                         .addLast("EventLoggerHandler", new EventLoggerHandler((context,cause)->"ClientToProxyServer:" + EventLoggerHandler.DEFAULT_HANDLER.apply(context,cause)));
 
                 channelToProxyServer.pipeline().addLast(proxyTransferHandler, new ProxyTransferHandler(ctx.channel(), true, destination));
@@ -59,5 +70,8 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
             }
         });
+    }
+    private Message PackageMessageToProxyServer(FullHttpRequest req){
+        return null;
     }
 }
