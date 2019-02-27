@@ -1,14 +1,9 @@
 package Server.handler;
 
 import common.Message;
-import common.log.LogUtil;
 import common.resource.ConnectionEvents;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.util.ReferenceCountUtil;
 
 public class HeaderIdentifyHandler extends ChannelInboundHandlerAdapter {
     @Override

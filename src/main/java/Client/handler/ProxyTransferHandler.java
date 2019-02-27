@@ -12,8 +12,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 
-import java.nio.charset.Charset;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class ProxyTransferHandler extends SimpleTransferHandler {
     private BlockingQueue<PendingWriteItem> pendingWrite = null;

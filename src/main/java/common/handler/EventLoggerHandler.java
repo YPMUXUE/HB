@@ -5,7 +5,6 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-import java.io.File;
 import java.util.function.BiFunction;
 
 public class EventLoggerHandler extends ChannelDuplexHandler {

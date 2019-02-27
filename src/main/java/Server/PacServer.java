@@ -28,7 +28,7 @@ public class PacServer {
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(new HttpRequestDecoder())
                         .addLast(new HttpObjectAggregator(8*8*1024))
-                        .addLast(new PacHandler());
+                        .addLast(new PacHandler("C:\\Users\\YP\\Desktop\\pac.txt"));
                     }
                 });
         InetAddress host=InetAddress.getLocalHost();
@@ -59,6 +59,8 @@ public class PacServer {
                     "\r\n").getBytes(Charset.forName("ascii"))));
             ctx.writeAndFlush(Unpooled.buffer().writeBytes(result));
             ((FullHttpRequest) msg).release();
+            ctx.writeAndFlush("\r\n");
+            ctx.close();
         }
     }
 }

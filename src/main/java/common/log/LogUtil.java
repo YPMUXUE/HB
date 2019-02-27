@@ -4,11 +4,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Objects;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 public class LogUtil {
