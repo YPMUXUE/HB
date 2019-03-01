@@ -9,3 +9,8 @@
                   connection_establish (response) 响应包，对应bind成功的响应
                   connection_establish_failed
 
+
+
+客户端与服务端的握手请求：
+客户端利用拦截下channelactive事件，向服务端发送握手信息，待握手成立后再激活channelactive事件
+服务端在连接接受后即channelactive时向客户端发送验证信息

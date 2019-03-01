@@ -7,11 +7,19 @@ import common.log.LogUtil;
 import common.resource.SystemConfig;
 import common.util.Connections;
 import common.resource.StaticConfig;
+import common.util.MessageUtil;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import java.util.concurrent.TimeUnit;
@@ -19,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final static String clientTransferHandler ="ClientTransferHandler";
     private final static String proxyTransferHandler="ProxyTransferHandler";
+    private Channel ChannelToProxyServer;
 
     public HttpMethodHandler() {
     }
@@ -39,15 +48,20 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
     }
 
     private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg) {
-        String hostName=msg.uri();
-        HostAndPort destination = HostAndPort.resolve(msg);
-        System.out.println(msg.retain().duplicate().toString());
-        System.out.println("\r\n\r\n");
-        System.out.println(ByteBufUtil.hexDump(msg.content()));
+        String uri=msg.uri();
+        String host=msg.headers().get(HttpHeaderNames.HOST);
+        LogUtil.info(()->("uri:"+uri+",host:"+host));
+        final HostAndPort destination = HostAndPort.resolve(msg);
+        final Message reqMessage= MessageUtil.HttpRequestToMessage(Unpooled.buffer(),msg);
         msg.release();
-//        Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
-//
-//        });
+        ProxyTransferHandler oldProxyHandler=(ProxyTransferHandler)ctx.pipeline().get(proxyTransferHandler);
+        if (oldProxyHandler == null){
+            Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
+                ctx.pipeline().addLast(proxyTransferHandler,new ProxyTransferHandler())
+            });
+        }else {
+            ProxyTransferHandler newProxyHandler = new ProxyTransferHandler(oldProxyHandler, destination);
+        }
 
     }
 

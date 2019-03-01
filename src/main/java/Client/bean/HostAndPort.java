@@ -67,4 +67,21 @@ public class HostAndPort {
     public int getPort(){
         return Integer.valueOf(port);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (super.equals(obj)){
+            return true;
+        }
+        if (!(obj instanceof HostAndPort)){
+            return false;
+        }
+        HostAndPort o = (HostAndPort) obj;
+        return this.host.equals(o.host) && this.port.equals(o.port);
+    }
+
+    @Override
+    public int hashCode() {
+        return this.host.hashCode()^this.port.hashCode();
+    }
 }

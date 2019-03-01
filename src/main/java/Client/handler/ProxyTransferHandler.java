@@ -25,6 +25,10 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
         super(targetChannel, closeTargetChannel);
         this.hostAndPort = hostAndPort;
     }
+    public ProxyTransferHandler(ProxyTransferHandler oldHandler,HostAndPort hostAndPort){
+        super(oldHandler.targetChannel,oldHandler.closeTargetChannel);
+        this.hostAndPort=hostAndPort;
+    }
 
     private void init() {
         this.isInitialized = true;
@@ -89,6 +93,7 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         if (!ctx.channel().isActive()){
+            LogUtil.info(()->"the channel ["+ctx.channel()+"] is not active");
             return;
         }
         if (!isInitialized) {
