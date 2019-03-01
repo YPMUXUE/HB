@@ -8,7 +8,7 @@ import java.nio.charset.Charset;
 
 public class SimpleTransferHandler extends ChannelDuplexHandler {
     protected final Channel targetChannel;
-    private final boolean closeTargetChannel;
+    protected final boolean closeTargetChannel;
 
     public SimpleTransferHandler(Channel channel) {
         targetChannel = channel;
