@@ -39,7 +39,10 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
             if (HttpMethod.CONNECT.equals(msg.method())) {
                 handleConnect(ctx, msg);
             } else {
-                handleSimpleProxy(ctx, msg);
+                //TODO 以后有心情了再考虑
+//                handleSimpleProxy(ctx, msg);
+                ctx.channel().close();
+                return;
             }
         }finally {
 //            这里不需要释放，SimpleChannelInboundHandler里有释放操作 巨坑注意
@@ -48,20 +51,21 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
     }
 
     private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg) {
-        String uri=msg.uri();
-        String host=msg.headers().get(HttpHeaderNames.HOST);
-        LogUtil.info(()->("uri:"+uri+",host:"+host));
-        final HostAndPort destination = HostAndPort.resolve(msg);
-        final Message reqMessage= MessageUtil.HttpRequestToMessage(Unpooled.buffer(),msg);
-        msg.release();
-        ProxyTransferHandler oldProxyHandler=(ProxyTransferHandler)ctx.pipeline().get(proxyTransferHandler);
-        if (oldProxyHandler == null){
-            Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
-                ctx.pipeline().addLast(proxyTransferHandler,new ProxyTransferHandler())
-            });
-        }else {
-            ProxyTransferHandler newProxyHandler = new ProxyTransferHandler(oldProxyHandler, destination);
-        }
+        throw new UnsupportedOperationException("普通HTTP代理请求还没完成，先放着");
+//        String uri=msg.uri();
+//        String host=msg.headers().get(HttpHeaderNames.HOST);
+//        LogUtil.info(()->("uri:"+uri+",host:"+host));
+//        final HostAndPort destination = HostAndPort.resolve(msg);
+//        final Message reqMessage= MessageUtil.HttpRequestToMessage(Unpooled.buffer(),msg);
+//        msg.release();
+//        ProxyTransferHandler oldProxyHandler=(ProxyTransferHandler)ctx.pipeline().get(proxyTransferHandler);
+//        if (oldProxyHandler == null){
+//            Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
+////                ctx.pipeline().addLast(proxyTransferHandler,new ProxyTransferHandler())
+//            });
+//        }else {
+//            ProxyTransferHandler newProxyHandler = new ProxyTransferHandler(oldProxyHandler, destination);
+//        }
 
     }
 
@@ -81,7 +85,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 channelToProxyServer.pipeline().addLast(proxyTransferHandler, new ProxyTransferHandler(ctx.channel(), true, destination));
             } else {
                 LogUtil.info(() -> (hostName + "connect failed"));
-                ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
+                ctx.channel().close();
             }
         });
     }

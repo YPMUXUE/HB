@@ -100,8 +100,8 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (closeTargetChannel && targetChannel != null) {
-            targetChannel.close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
+        if (closeTargetChannel && targetChannel != null && targetChannel.isActive()) {
+            targetChannel.eventLoop().submit(()->{targetChannel.close();});
         }
         super.close(ctx,promise);
     }

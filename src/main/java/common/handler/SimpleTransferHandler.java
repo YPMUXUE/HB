@@ -38,8 +38,10 @@ public class SimpleTransferHandler extends ChannelDuplexHandler {
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (targetChannel!=null && closeTargetChannel) {
-            targetChannel.close();
+        if (targetChannel!=null && targetChannel.isActive() && closeTargetChannel) {
+            targetChannel.eventLoop().submit(()->{
+                targetChannel.close();
+            });
         }
         super.close(ctx,promise);
     }
