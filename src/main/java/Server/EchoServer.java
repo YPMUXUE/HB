@@ -34,7 +34,7 @@ public class EchoServer {
                     }
                 });
         InetAddress localAddr=InetAddress.getLocalHost();
-        SocketAddress address=new InetSocketAddress("192.168.36.178",4449);
+        SocketAddress address=new InetSocketAddress("127.0.0.1",4449);
         ChannelFuture future = serverBootstrap.bind(address);
         future.syncUninterruptibly();
     }
