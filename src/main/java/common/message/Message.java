@@ -9,7 +9,7 @@ public interface Message {
 
 	ByteBuf writeByteBuf(ByteBuf byteBuf);
 
-	ConnectionEvents handleType();
+	ConnectionEvents getSupportConnectionEvent();
 
 	void load(byte[] bytes);
 

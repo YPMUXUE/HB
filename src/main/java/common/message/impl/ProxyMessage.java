@@ -21,7 +21,7 @@ public class ProxyMessage extends AbstractByteBufContentMessage {
 	}
 
 	@Override
-	public ConnectionEvents handleType() {
+	public ConnectionEvents getSupportConnectionEvent() {
 		return operationCode;
 	}
 

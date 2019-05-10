@@ -24,7 +24,7 @@ public abstract class AbstractByteBufContentMessage implements ByteBufContentMes
 //	}
 //
 //	@Override
-//	public ConnectionEvents handleType() {
+//	public ConnectionEvents getSupportConnectionEvent() {
 //		throw new UnsupportedOperationException();
 //	}
 //
