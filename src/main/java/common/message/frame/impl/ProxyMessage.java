@@ -1,7 +1,7 @@
-package common.message.impl;
+package common.message.frame.impl;
 
 
-import common.message.AbstractByteBufContentMessage;
+import common.message.frame.AbstractByteBufContentMessage;
 import common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
 

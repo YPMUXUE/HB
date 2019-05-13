@@ -1,4 +1,4 @@
-package common.message;
+package common.message.frame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
