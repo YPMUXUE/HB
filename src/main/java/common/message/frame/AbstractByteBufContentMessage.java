@@ -7,41 +7,6 @@ import io.netty.util.ReferenceCounted;
 public abstract class AbstractByteBufContentMessage implements ByteBufContentMessage {
 	protected ByteBuf content;
 
-//	@Override
-//	public byte[] toBytes() {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public ByteBuf toByteBuf() {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public ByteBuf writeByteBuf(ByteBuf byteBuf) {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public ConnectionEvents getSupportConnectionEvent() {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public void load(byte[] bytes) {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public void load(ByteBuf byteBuf) {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	@Override
-//	public int size() {
-//		throw new UnsupportedOperationException();
-//	}
-
 	@Override
 	public ByteBuf getContent() {
 		return content;

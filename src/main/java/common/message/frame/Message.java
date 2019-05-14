@@ -5,15 +5,6 @@ import io.netty.buffer.ByteBuf;
 
 
 public interface Message {
-	byte[] toBytes();
+	ConnectionEvents supportConnectionEvent();
 
-	ByteBuf writeByteBuf(ByteBuf byteBuf);
-
-	ConnectionEvents getSupportConnectionEvent();
-
-	void load(byte[] bytes);
-
-	void load(ByteBuf byteBuf);
-
-	int size();
 }
