@@ -13,6 +13,11 @@ public abstract class AbstractByteBufContentMessage implements ByteBufContentMes
 	}
 
 	@Override
+	public void setContent(ByteBuf content) {
+		this.content = content;
+	}
+
+	@Override
 	public int refCnt() {
 		return content.refCnt();
 	}

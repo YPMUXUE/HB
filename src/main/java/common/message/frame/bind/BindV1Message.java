@@ -1,10 +1,10 @@
 package common.message.frame.bind;
 
 
-import common.message.frame.Message;
+import common.message.frame.AbstractByteBufContentMessage;
 import common.resource.ConnectionEvents;
 
-public class BindV1Message implements Message {
+public class BindV1Message extends AbstractByteBufContentMessage {
 	public static final ConnectionEvents operationCode = ConnectionEvents.BIND;
 
 	private byte[] destination;
