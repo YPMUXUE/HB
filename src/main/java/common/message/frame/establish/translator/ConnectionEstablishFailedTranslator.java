@@ -1,20 +1,21 @@
 package common.message.frame.establish.translator;
 
 
-import common.message.frame.Message;
-import common.message.frame.MessageTranslator;
+import common.message.MessageTranslator;
 import common.message.frame.establish.ConnectionEstablishFailedMessage;
 import common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
 
-public class ConnectionEstablishFailedTranslator implements MessageTranslator {
+import java.nio.charset.StandardCharsets;
+
+public class ConnectionEstablishFailedTranslator implements MessageTranslator<ConnectionEstablishFailedMessage> {
 	@Override
 	public ConnectionEvents getSupportConnectionEvent() {
 		return ConnectionEstablishFailedMessage.operationCode;
 	}
 
 	@Override
-	public Message translate(ByteBuf buf) {
+	public ConnectionEstablishFailedMessage translate(ByteBuf buf) {
 		short code = buf.readShort();
 		if (code != ConnectionEstablishFailedMessage.operationCode.getCode()) {
 			throw new IllegalArgumentException(code + ":code unSupport");
@@ -27,5 +28,33 @@ public class ConnectionEstablishFailedTranslator implements MessageTranslator {
 		String reason = new String(reasonEncoded);
 		message.setReason(reason);
 		return message;
+	}
+
+	@Override
+	public ByteBuf writeByteBuf(ByteBuf buf, ConnectionEstablishFailedMessage message) {
+		ConnectionEvents operationCode = message.supportConnectionEvent();
+		if (!ConnectionEstablishFailedMessage.operationCode.equals(operationCode)) {
+			throw new IllegalArgumentException(operationCode + " ： unSupport code");
+		}
+		if (!(message instanceof ConnectionEstablishFailedMessage)) {
+			throw new IllegalArgumentException(message.getClass().toString());
+		}
+		ConnectionEstablishFailedMessage m = (ConnectionEstablishFailedMessage) message;
+
+		String reason = m.getReason();
+		byte[] reasonBytes = reason.getBytes(StandardCharsets.UTF_8);
+		if (reasonBytes.length > Short.MAX_VALUE) {
+			throw new IllegalArgumentException("too long reason " + reasonBytes.length);
+		}
+		short reasonLength = (short) reasonBytes.length;
+		buf.writeShort(ConnectionEstablishFailedMessage.operationCode.getCode());
+		buf.writeInt(reasonLength + 2);
+		buf.writeBytes(reasonBytes);
+		return buf;
+	}
+
+	@Override
+	public byte[] toBytes(ConnectionEstablishFailedMessage message) {
+		throw new UnsupportedOperationException();
 	}
 }

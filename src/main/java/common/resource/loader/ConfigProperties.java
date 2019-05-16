@@ -35,4 +35,12 @@ public class ConfigProperties {
 	public static String getProperty(String key) {
 		return configMap.get(key);
 	}
+	public static String getProperty(String key,String defaultValue) {
+		String result = configMap.get(key);
+		if (result == null){
+			return defaultValue;
+		}else{
+			return result;
+		}
+	}
 }

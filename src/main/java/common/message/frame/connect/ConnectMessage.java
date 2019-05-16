@@ -10,9 +10,17 @@ public class ConnectMessage extends AbstractByteBufContentMessage {
 
 	public static final ConnectionEvents operationCode = ConnectionEvents.CONNECT;
 
+	public ConnectMessage() {
+	}
+
+	public ConnectMessage(ByteBuf content) {
+		this.content = content;
+	}
+
 	public int getInputLength() {
 		return inputLength;
 	}
+
 	@Override
 	public ConnectionEvents supportConnectionEvent() {
 		return operationCode;

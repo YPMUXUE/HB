@@ -1,4 +1,4 @@
-package common.message.frame;
+package common.message;
 
 
 import org.apache.commons.collections4.CollectionUtils;

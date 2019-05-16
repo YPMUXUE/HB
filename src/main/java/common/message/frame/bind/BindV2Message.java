@@ -1,9 +1,9 @@
 package common.message.frame.bind;
 
-import common.message.frame.AbstractByteBufContentMessage;
+import common.message.frame.Message;
 import common.resource.ConnectionEvents;
 
-public class BindV2Message extends AbstractByteBufContentMessage {
+public class BindV2Message implements Message {
 	public static final ConnectionEvents operationCode = ConnectionEvents.BIND2;
 
 	private String hostName;
