@@ -64,16 +64,20 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		}
 	}
 
-	private void handleBindV2(ChannelHandlerContext ctx, BindV2Message m) {
+	private void handleBindV2(ChannelHandlerContext ctx, BindV2Message m) throws Exception {
 		removeOldConnection(ctx, m);
 		String host = m.getHostName();
 		int port = m.getPort();
+		InetSocketAddress address;
 		try {
-			InetSocketAddress address = new InetSocketAddress(InetAddress.getByName(host),port);
+			address = new InetSocketAddress(InetAddress.getByName(host),port);
 		} catch (UnknownHostException e) {
 			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:"+host));
-			ctx.newPromise()
+			//todo 先不主动关闭连接 等超时handler触发了再关闭
+			return;
 		}
+		this.targetChannel = this.getConnection(ctx, address);
+
 	}
 
 	private void handleBindV1(ChannelHandlerContext ctx, BindV1Message m) throws Exception {
@@ -104,19 +108,12 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private void removeOldConnection(ChannelHandlerContext ctx, Message m) {
 		if (this.targetChannel != null) {
-			this.targetChannel.eventLoop().submit(()->{targetChannel.close();});
+			this.targetChannel.eventLoop().submit(()->{
+				if(targetChannel.isActive())
+					targetChannel.close();
+			});
 			this.targetChannel = null;
 		}
-//        boolean flag=false;
-//        for (Map.Entry<String, ChannelHandler> stringChannelHandlerEntry : ctx.pipeline()) {
-//            if (stringChannelHandlerEntry.getKey().equals(Proxy_Transfer_Name)){
-//                flag=true;
-//                break;
-//            }
-//        }
-//        if (flag){
-//            ctx.pipeline().remove(Proxy_Transfer_Name);
-//        }
 	}
 
 	@Override
