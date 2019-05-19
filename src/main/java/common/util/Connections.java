@@ -5,11 +5,12 @@ import common.handler.ReadWriteTimeoutHandler;
 import common.handler.coder.ByteBufToMessageInboundHandler;
 import common.handler.coder.MessageToByteBufOutboundHandler;
 import common.resource.StaticConfig;
+import common.resource.SystemConfig;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
-import common.resource.SystemConfig;
 
 import java.net.SocketAddress;
 import java.util.function.BiConsumer;
@@ -17,6 +18,16 @@ import java.util.function.BiConsumer;
 
 public class Connections {
     private static final Bootstrap defaultBootstrap=new Bootstrap();
+    static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+
+    public static ChannelFuture connect(EventLoop eventLoop, SocketAddress address, ChannelInitializer channelInitializer){
+        Bootstrap bootstrap = defaultBootstrap.clone();
+        bootstrap.group(eventLoop)
+                .channel(NioSocketChannel.class)
+                .handler(channelInitializer);
+        return bootstrap.connect(address);
+    }
+
     public static ChannelFuture newConnectionToServer(EventLoop eventLoop, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
         Bootstrap bootstrap = defaultBootstrap.clone();
         bootstrap.group(eventLoop)

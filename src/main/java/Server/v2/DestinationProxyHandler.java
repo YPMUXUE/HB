@@ -1,6 +1,7 @@
 package Server.v2;
 
 
+import common.handler.ReadWriteTimeoutHandler;
 import common.handler.SimpleTransferHandler;
 import common.log.LogUtil;
 import common.message.frame.Message;
@@ -15,6 +16,7 @@ import common.resource.SystemConfig;
 import common.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
+import io.netty.util.concurrent.EventExecutor;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -23,9 +25,14 @@ import java.net.UnknownHostException;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
+
 	private Channel targetChannel;
 	private final boolean closeTargetChannel;
 //    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
+
+	static {
+
+	}
 
 	public DestinationProxyHandler() {
 		this.closeTargetChannel = true;
@@ -70,13 +77,13 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		int port = m.getPort();
 		InetSocketAddress address;
 		try {
-			address = new InetSocketAddress(InetAddress.getByName(host),port);
+			address = new InetSocketAddress(InetAddress.getByName(host), port);
 		} catch (UnknownHostException e) {
-			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:"+host));
+			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:" + host));
 			//todo 先不主动关闭连接 等超时handler触发了再关闭
 			return;
 		}
-		this.targetChannel = this.getConnection(ctx, address);
+		this.doConnect(ctx, address);
 
 	}
 
@@ -84,32 +91,42 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		removeOldConnection(ctx, m);
 		byte[] des = m.getDestination();
 		InetSocketAddress address = new InetSocketAddress(InetAddress.getByAddress(new byte[]{des[0], des[1], des[2], des[3]}), ((des[4] & 0xFF) << 8) | (des[5] & 0xFF));
-		this.targetChannel = this.getConnection(ctx, address);
+		this.doConnect(ctx, address);
 	}
 
-	private Channel getConnection(ChannelHandlerContext ctx, SocketAddress address)throws Exception{
-		ChannelFuture channelFuture = Connections.newConnectionToServer(ctx.channel().eventLoop()
-				, address
-				, (status, channelToServer) -> {
-					if (status == SystemConfig.SUCCESS) {
-						channelToServer.pipeline().addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel()));
+	private void doConnect(ChannelHandlerContext ctx, SocketAddress address) throws Exception {
 
-						LogUtil.info(() -> channelToServer + " connect success");
-//                        ctx.pipeline().addAfter(ctx.name(),Proxy_Transfer_Name,new SimpleTransferHandler(channelToServer,true));
-						ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-					} else {
-						LogUtil.info(() -> channelToServer + " connect failed");
-						ctx.writeAndFlush(new ConnectionEstablishFailedMessage())
-								.addListener(ChannelFutureListener.CLOSE);
-					}
+		ChannelInitializer<Channel> channelChannelInitializerToNewConnection = new ChannelInitializer<Channel>() {
+			@Override
+			protected void initChannel(Channel ch) throws Exception {
+				ChannelPipeline pipeline = ch.pipeline();
+				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(SystemConfig.timeout));
+				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel()));
+			}
+		};
+		EventExecutor executor = ctx.executor();
+
+		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, channelChannelInitializerToNewConnection);
+		Channel channelToServer = connectToServer.channel();
+		connectToServer.addListener((f) -> {
+			if (f.isSuccess()) {
+				executor.execute(() -> {
+					targetChannel = channelToServer;
+					LogUtil.info(() -> channelToServer + " connect success");
+					ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 				});
-		return channelFuture.channel();
+			} else {
+				LogUtil.info(() -> channelToServer + " connect failed");
+				ctx.writeAndFlush(new ConnectionEstablishFailedMessage())
+						.addListener(ChannelFutureListener.CLOSE);
+			}
+		});
 	}
 
 	private void removeOldConnection(ChannelHandlerContext ctx, Message m) {
 		if (this.targetChannel != null) {
-			this.targetChannel.eventLoop().submit(()->{
-				if(targetChannel.isActive())
+			this.targetChannel.eventLoop().submit(() -> {
+				if (targetChannel.isActive())
 					targetChannel.close();
 			});
 			this.targetChannel = null;
