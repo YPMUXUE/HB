@@ -96,7 +96,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private void doConnect(ChannelHandlerContext ctx, SocketAddress address) throws Exception {
 
-		ChannelInitializer<Channel> channelChannelInitializerToNewConnection = new ChannelInitializer<Channel>() {
+		ChannelInitializer<Channel> initializerToNewConnection = new ChannelInitializer<Channel>() {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
 				ChannelPipeline pipeline = ch.pipeline();
@@ -105,8 +105,8 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			}
 		};
 		EventExecutor executor = ctx.executor();
-
-		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, channelChannelInitializerToNewConnection);
+//TODO
+		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, initializerToNewConnection);
 		Channel channelToServer = connectToServer.channel();
 		connectToServer.addListener((f) -> {
 			if (f.isSuccess()) {

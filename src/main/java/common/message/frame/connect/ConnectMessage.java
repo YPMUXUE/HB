@@ -17,6 +17,10 @@ public class ConnectMessage extends AbstractByteBufContentMessage {
 		this.content = content;
 	}
 
+	public void setInputLength(int inputLength) {
+		this.inputLength = inputLength;
+	}
+
 	public int getInputLength() {
 		return inputLength;
 	}
@@ -26,12 +30,13 @@ public class ConnectMessage extends AbstractByteBufContentMessage {
 		return operationCode;
 	}
 
+	@Deprecated
 	public void load(ByteBuf byteBuf) {
 		short operationCode = byteBuf.readShort();
 		if (operationCode != ConnectMessage.operationCode.getCode()) {
 			throw new IllegalArgumentException(operationCode + "");
 		}
 		this.inputLength = byteBuf.readInt();
-		this.content = byteBuf;
+		this.content = byteBuf.retain();
 	}
 }

@@ -1,14 +1,15 @@
 package common.util;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.commons.codec.binary.Base64;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.commons.codec.binary.Base64;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @version V1.0
@@ -99,7 +100,7 @@ public class AESUtil {
 
     public static void main(String[] args) {
         long start=System.currentTimeMillis();
-        String s = "lark";
+        String s = "111";
 
         System.out.println("s:" + s);
 

@@ -14,12 +14,15 @@ public class ConnectMessageTranslator implements MessageTranslator<ConnectMessag
 
 	@Override
 	public ConnectMessage translate(ByteBuf buf) {
-		short code = buf.getShort(0);
-		if (code != ConnectMessage.operationCode.getCode()){
-			throw new IllegalArgumentException(code+"");
+		short operationCode = buf.readShort();
+		if (operationCode != ConnectMessage.operationCode.getCode()){
+			throw new IllegalArgumentException(operationCode+"");
 		}
 		ConnectMessage message = new ConnectMessage();
-		message.load(buf);
+//		message.load(buf);
+
+		message.setInputLength(buf.readInt());
+		message.setContent(buf.retain());
 		return message;
 	}
 
