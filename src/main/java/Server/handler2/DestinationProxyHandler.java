@@ -1,4 +1,4 @@
-package Server.v2;
+package Server.handler2;
 
 
 import common.handler.ReadWriteTimeoutHandler;
@@ -35,7 +35,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	public DestinationProxyHandler() {
-		this.closeTargetChannel = true;
+		this.closeTargetChannel = false;
 		this.targetChannel = null;
 	}
 
@@ -80,7 +80,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			address = new InetSocketAddress(InetAddress.getByName(host), port);
 		} catch (UnknownHostException e) {
 			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:" + host));
-			//todo 先不主动关闭连接 等超时handler触发了再关闭
+			//note: 先不主动关闭连接 等超时handler触发了再关闭
 			return;
 		}
 		this.doConnect(ctx, address);
@@ -105,20 +105,24 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			}
 		};
 		EventExecutor executor = ctx.executor();
-//TODO
+
 		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, initializerToNewConnection);
 		Channel channelToServer = connectToServer.channel();
 		connectToServer.addListener((f) -> {
 			if (f.isSuccess()) {
-				executor.execute(() -> {
+				Runnable task = () -> {
 					targetChannel = channelToServer;
 					LogUtil.info(() -> channelToServer + " connect success");
 					ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-				});
+				};
+				if (executor.inEventLoop()){
+					task.run();
+				}else {
+					executor.execute(task);
+				}
 			} else {
 				LogUtil.info(() -> channelToServer + " connect failed");
-				ctx.writeAndFlush(new ConnectionEstablishFailedMessage())
-						.addListener(ChannelFutureListener.CLOSE);
+				ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.CLOSE);
 			}
 		});
 	}

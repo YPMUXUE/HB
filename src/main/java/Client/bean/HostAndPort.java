@@ -11,12 +11,47 @@ public class HostAndPort {
     private String port;
     public static HostAndPort resolve(FullHttpRequest req){
         if (HttpMethod.CONNECT.equals(req.method())){
-            return resolveConnectRequest(req);
+            return resolve(req.uri());
         }else {
-            return resolvePlainRequest(req);
+            return resolve(req.uri(),req.headers().get("Host"));
         }
     }
 
+    public static HostAndPort resolve(String uri) {
+        HostAndPort result=new HostAndPort();
+        result.host = uri.substring(0, uri.lastIndexOf(":"));
+        result.port = uri.substring(uri.lastIndexOf(":") + 1);
+        return result;
+    }
+
+    public static HostAndPort resolve(String uri, String host) {
+        HostAndPort result=new HostAndPort();
+        if (!uri.startsWith("/")) {
+            String protocol = uri.substring(0, uri.indexOf("://"));
+            String hostAndPort = uri.substring(uri.indexOf("://") + 3);
+            if (hostAndPort.contains("/")) {
+                hostAndPort = hostAndPort.substring(0, hostAndPort.indexOf("/"));
+            }
+            if (hostAndPort.contains(":")) {
+                result.port = hostAndPort.substring(hostAndPort.indexOf(":") + 1);
+                result.host = hostAndPort.substring(0, hostAndPort.indexOf(":"));
+            } else {
+                result.port = Protocol.valueOf(protocol).getPort();
+                result.host = hostAndPort;
+            }
+        }else{
+            if (host.contains(":")) {
+                result.port = host.substring(host.indexOf(":") + 1);
+                result.host = host.substring(0, host.indexOf(":"));
+            } else {
+                result.port = "80";
+                result.host = host;
+            }
+        }
+        return result;
+    }
+
+    @Deprecated
     private static HostAndPort resolvePlainRequest(FullHttpRequest req) {
         HostAndPort result=new HostAndPort();
         final String uri=req.uri();
@@ -46,6 +81,7 @@ public class HostAndPort {
             return result;
     }
 
+    @Deprecated
     private static HostAndPort resolveConnectRequest(FullHttpRequest req) {
         HostAndPort result=new HostAndPort();
         final String uri = req.uri();
