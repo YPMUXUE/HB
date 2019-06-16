@@ -4,26 +4,19 @@ import Client.bean.HostAndPort;
 import common.Message;
 import common.handler.EventLoggerHandler;
 import common.log.LogUtil;
+import common.resource.StaticConfig;
 import common.resource.SystemConfig;
 import common.util.Connections;
-import common.resource.StaticConfig;
-import common.util.MessageUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import java.util.concurrent.TimeUnit;
 
+@Deprecated
 public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final static String clientTransferHandler ="ClientTransferHandler";
     private final static String proxyTransferHandler="ProxyTransferHandler";
@@ -58,13 +51,13 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
 //        final HostAndPort destination = HostAndPort.resolve(msg);
 //        final Message reqMessage= MessageUtil.HttpRequestToMessage(Unpooled.buffer(),msg);
 //        msg.release();
-//        ProxyTransferHandler oldProxyHandler=(ProxyTransferHandler)ctx.pipeline().get(proxyTransferHandler);
+//        PendingWriteTransferHandler oldProxyHandler=(PendingWriteTransferHandler)ctx.pipeline().get(proxyTransferHandler);
 //        if (oldProxyHandler == null){
 //            Connections.newConnectionToProxyServer(ctx.channel().eventLoop(),(channelFuture, channelToProxyServer)->{
-////                ctx.pipeline().addLast(proxyTransferHandler,new ProxyTransferHandler())
+////                ctx.pipeline().addLast(proxyTransferHandler,new PendingWriteTransferHandler())
 //            });
 //        }else {
-//            ProxyTransferHandler newProxyHandler = new ProxyTransferHandler(oldProxyHandler, destination);
+//            PendingWriteTransferHandler newProxyHandler = new PendingWriteTransferHandler(oldProxyHandler, destination);
 //        }
 
     }
@@ -80,7 +73,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
                 ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
                 ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
                         .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true, ClientTransferHandler.HTTPS_PROCESSOR))
-                        .addLast("EventLoggerHandler", new EventLoggerHandler((context,cause)->"ClientToProxyServer:" + EventLoggerHandler.DEFAULT_HANDLER.apply(context,cause)));
+                        .addLast("EventLoggerHandler", new EventLoggerHandler("ClientToProxyServer", true));
 
                 channelToProxyServer.pipeline().addLast(proxyTransferHandler, new ProxyTransferHandler(ctx.channel(), true, destination));
             } else {

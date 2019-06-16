@@ -3,6 +3,7 @@ package common.message;
 
 import common.message.frame.bind.translator.BindV1Translator;
 import common.message.frame.bind.translator.BindV2Translator;
+import common.message.frame.close.translator.CloseTranslator;
 import common.message.frame.connect.translator.ConnectMessageTranslator;
 import common.message.frame.establish.translator.ConnectionEstablishFailedTranslator;
 import common.message.frame.establish.translator.ConnectionEstablishTranslator;
@@ -21,6 +22,7 @@ public class MessageTranslatorFactory {
 		list.add(new ConnectMessageTranslator());
 		list.add(new ConnectionEstablishFailedTranslator());
 		list.add(new ConnectionEstablishTranslator());
+		list.add(new CloseTranslator());
 
 		ALL_TRANSLATORS = new MessageTranslatorFactory(list);
 	}

@@ -2,6 +2,7 @@ package Client.handler2;
 
 import common.handler.SimpleTransferHandler;
 import common.message.frame.Message;
+import common.message.frame.close.CloseMessage;
 import common.message.frame.connect.ConnectMessage;
 import common.message.frame.establish.ConnectionEstablishFailedMessage;
 import common.message.frame.establish.ConnectionEstablishMessage;
@@ -22,16 +23,15 @@ public class ClientTransferHandler extends SimpleTransferHandler {
             return Unpooled.buffer().writeBytes(HttpResources.HttpResponse.Connection_Failed.getBytes(Charset.forName("utf-8")));
         }else if (msg instanceof ConnectMessage){
             return ((ConnectMessage) msg).getContent();
+        }else if (msg instanceof CloseMessage){
+            ctx.channel().close();
+            return null;
         }else{
             throw new UnsupportedOperationException(msg.getClass().toString());
         }
     };
     private final MessageProcessor messageProcessor;
 
-    public ClientTransferHandler(Channel targetChannel, boolean closeTargetChannel, MessageProcessor messageProcessor) {
-        super(targetChannel, closeTargetChannel);
-        this.messageProcessor=messageProcessor;
-    }
 
     public ClientTransferHandler(Channel targetChannel, boolean closeTargetChannel) {
         super(targetChannel, closeTargetChannel);

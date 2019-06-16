@@ -6,7 +6,6 @@ import common.handler.SimpleTransferHandler;
 import common.log.LogUtil;
 import common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -15,34 +14,35 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class ProxyTransferHandler extends SimpleTransferHandler {
+public class PendingWriteTransferHandler extends SimpleTransferHandler {
     private BlockingQueue<PendingWriteItem> pendingWrite = null;
-    private boolean connectFinished = false;
-    private boolean isInitialized = false;
-    private final HostAndPort hostAndPort;
+    private boolean connectEstablish = false;
 
-    public ProxyTransferHandler(Channel targetChannel, boolean closeTargetChannel, HostAndPort hostAndPort) {
+    public PendingWriteTransferHandler(Channel targetChannel, boolean closeTargetChannel) {
         super(targetChannel, closeTargetChannel);
-        this.hostAndPort = hostAndPort;
-    }
-    public ProxyTransferHandler(ProxyTransferHandler oldHandler, HostAndPort hostAndPort){
-        super(oldHandler.targetChannel,oldHandler.closeTargetChannel);
-        this.hostAndPort=hostAndPort;
     }
 
     private void init() {
-        this.isInitialized = true;
-        this.connectFinished = false;
+        this.connectEstablish = false;
         if (pendingWrite == null) {
             pendingWrite = new LinkedBlockingQueue<>();
         } else {
+            clearPendingWrite();
+        }
+    }
+
+    private void clearPendingWrite() {
+        if (pendingWrite != null){
+            for (PendingWriteItem pendingWriteItem : pendingWrite) {
+                ReferenceCountUtil.release(pendingWriteItem);
+            }
             pendingWrite.clear();
         }
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (connectFinished) {
+        if (connectEstablish) {
             super.channelRead(ctx, msg);
         } else {
             try {
@@ -54,12 +54,10 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
             }catch (Exception e){
                 LogUtil.info(()->"connect to proxy server error result:"+e.toString());
                 ReferenceCountUtil.release(msg);
+                clearPendingWrite();
                 ctx.channel().close();
-                targetChannel.close();
                 return;
             }
-            writePendingDataLater(ctx);
-            notifyTargetChannel(ctx,msg);
         }
     }
 
@@ -67,49 +65,21 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
             targetChannel.writeAndFlush(msg);
     }
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (!isInitialized){
-            init();
-            Message message = new Message(ConnectionEvents.BIND.getCode()
-                    , this.hostAndPort
-                    , Unpooled.EMPTY_BUFFER);
-            ctx.writeAndFlush(message);
-        }
-        super.channelActive(ctx);
-    }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (isInitialized){
-            if (pendingWrite == null) {
-                pendingWrite = new LinkedBlockingQueue<>();
-            } else {
-                pendingWrite.clear();
-            }
-        }
+        clearPendingWrite();
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        if (!ctx.channel().isActive()){
-            LogUtil.info(()->"the channel ["+ctx.channel()+"] is not active");
-            return;
-        }
-        if (!isInitialized) {
-            init();
-            Message message = new Message(ConnectionEvents.BIND.getCode()
-                    , this.hostAndPort
-                    , Unpooled.EMPTY_BUFFER);
-            ctx.writeAndFlush(message);
-        }
-        super.handlerAdded(ctx);
+        init();
     }
 
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (connectFinished) {
+        if (connectEstablish) {
             writePendingData(ctx);
             this.write0(ctx, msg, promise);
         } else {
@@ -125,7 +95,7 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
                     ctx.write(item.data, item.promise);
                 }
             }
-            pendingWrite = null;
+            pendingWrite.clear();
         }
     }
 
@@ -139,14 +109,16 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
         }else if(msg instanceof ByteBuf){
             super.write(ctx,new Message(ConnectionEvents.CONNECT.getCode(),(HostAndPort) null,(ByteBuf) msg),promise);
         }else {
-            throw new RuntimeException("ProxyTransferHandler#write0 the msg is not a instance of Message or ByteBuf");
+            throw new RuntimeException("PendingWriteTransferHandler#write0 the msg is not a instance of Message or ByteBuf");
         }
     }
 
     private void handleResponse(ChannelHandlerContext ctx, ByteBuf msg) {
         byte result = msg.readByte();
         if (result == ConnectionEvents.CONNECTION_ESTABLISH.getCode()) {
-            connectFinished = true;
+            connectEstablish = true;
+            writePendingDataLater(ctx);
+            notifyTargetChannel(ctx,msg);
         } else {
             throw new RuntimeException("the response code of initializeRQ is not CONNECTION_ESTABLISH : " + result);
         }
@@ -155,11 +127,18 @@ public class ProxyTransferHandler extends SimpleTransferHandler {
     private void handleResponse(ChannelHandlerContext ctx, Message msg) {
         int result = msg.getOperationCode();
         if (result == ConnectionEvents.CONNECTION_ESTABLISH.getCode()) {
-            connectFinished = true;
+            connectEstablish = true;
+            writePendingDataLater(ctx);
+            notifyTargetChannel(ctx,msg);
         } else {
-            //todo 可以添加一个连接权限认证逻辑
             throw new RuntimeException("the response code of initializeRQ is not CONNECTION_ESTABLISH : " + result);
         }
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        clearPendingWrite();
+        super.close(ctx, promise);
     }
 
     private class PendingWriteItem {

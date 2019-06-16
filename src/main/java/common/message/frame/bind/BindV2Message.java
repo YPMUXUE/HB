@@ -10,6 +10,11 @@ public class BindV2Message implements Message {
 	private int port;
 	private int contentLength;
 
+	public BindV2Message(String hostName, int port) {
+		this.hostName = hostName;
+		this.port = port;
+	}
+
 	public String getHostName() {
 		return hostName;
 	}

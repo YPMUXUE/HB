@@ -100,6 +100,9 @@ public class HostAndPort {
     public InetAddress getHost()throws UnknownHostException {
         return InetAddress.getByName(this.host);
     }
+    public String getHostString(){
+        return host;
+    }
     public int getPort(){
         return Integer.valueOf(port);
     }

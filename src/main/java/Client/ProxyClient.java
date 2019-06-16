@@ -1,6 +1,7 @@
 package Client;
 
-import Client.handler.HttpMethodHandler;
+
+import Client.handler2.HttpMethodHandler;
 import common.handler.EventLoggerHandler;
 import common.log.LogUtil;
 import common.resource.SystemConfig;
@@ -53,7 +54,7 @@ public class ProxyClient {
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
                 pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS));
                 pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
-                pipeline.addLast("ExceptionHandler",new EventLoggerHandler((ctx,cause)->"ProxyClient："+EventLoggerHandler.DEFAULT_HANDLER.apply(ctx,cause)));
+                pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient",true));
             }
         });
         proxyClient.serverChannel.closeFuture().addListener((f) -> {

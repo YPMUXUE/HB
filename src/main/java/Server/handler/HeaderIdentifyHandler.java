@@ -5,6 +5,8 @@ import common.resource.ConnectionEvents;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+
+@Deprecated
 public class HeaderIdentifyHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

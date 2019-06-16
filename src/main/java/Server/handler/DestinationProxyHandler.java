@@ -13,6 +13,7 @@ import io.netty.channel.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+@Deprecated
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
     private Channel targetChannel;

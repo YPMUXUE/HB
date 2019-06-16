@@ -28,6 +28,7 @@ public class Connections {
         return bootstrap.connect(address);
     }
 
+    @Deprecated
     public static ChannelFuture newConnectionToServer(EventLoop eventLoop, SocketAddress address, BiConsumer<Integer,Channel> channelConsumer) throws Exception{
         Bootstrap bootstrap = defaultBootstrap.clone();
         bootstrap.group(eventLoop)
@@ -50,9 +51,7 @@ public class Connections {
         return future;
     }
 
-    /**
-     *
-     */
+    @Deprecated
     public static ChannelFuture newConnectionToProxyServer(EventLoop eventLoop, BiConsumer<Future,Channel> channelConsumer){
         Bootstrap bootstrap = defaultBootstrap.clone();
         bootstrap.group(eventLoop)
@@ -66,7 +65,7 @@ public class Connections {
                         //outbound
                         ch.pipeline().addLast("MessageToByteBufHandler",new MessageToByteBufOutboundHandler());
                         //log
-                        ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler(false));
+                        ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler("ConnectionToProxyServer", false));
                     }
                 });
         ChannelFuture future=bootstrap.connect(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT);

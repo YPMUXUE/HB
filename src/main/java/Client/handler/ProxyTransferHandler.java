@@ -15,6 +15,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+@Deprecated
 public class ProxyTransferHandler extends SimpleTransferHandler {
     private BlockingQueue<PendingWriteItem> pendingWrite = null;
     private boolean connectFinished = false;

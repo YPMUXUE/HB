@@ -15,4 +15,12 @@ public class SystemConfig {
 
 	public static final int PACKAGE_MAX_LENGTH = 64 * 1024;
 
+    /**address config**/
+    public static final String PROXY_SERVER_ADDRESS ; //tencent
+    public static final int PROXY_SERVER_PORT = 9002;
+
+    static {
+        PROXY_SERVER_ADDRESS = "";
+    }
+
 }

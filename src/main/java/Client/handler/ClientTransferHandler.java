@@ -13,6 +13,7 @@ import io.netty.channel.ChannelPromise;
 
 import java.nio.charset.Charset;
 
+@Deprecated
 public class ClientTransferHandler extends SimpleTransferHandler {
     public static final MessageProcessor HTTPS_PROCESSOR = (ctx, targetChannel, msg) -> {
         if (msg.getOperationCode() == ConnectionEvents.CONNECTION_ESTABLISH.getCode()) {

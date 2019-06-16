@@ -7,6 +7,7 @@ import common.log.LogUtil;
 import common.message.frame.Message;
 import common.message.frame.bind.BindV1Message;
 import common.message.frame.bind.BindV2Message;
+import common.message.frame.close.CloseMessage;
 import common.message.frame.connect.ConnectMessage;
 import common.message.frame.establish.ConnectionEstablishFailedMessage;
 import common.message.frame.establish.ConnectionEstablishMessage;
@@ -111,7 +112,22 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		connectToServer.addListener((f) -> {
 			if (f.isSuccess()) {
 				Runnable task = () -> {
-					targetChannel = channelToServer;
+					DestinationProxyHandler.this.targetChannel = channelToServer;
+
+					channelToServer.closeFuture().addListener((closeFuture)->{
+						Runnable closeTask = ()->{
+							if (channelToServer.equals(DestinationProxyHandler.this.targetChannel)){
+								LogUtil.info(()->"server close the connection"+channelToServer);
+								DestinationProxyHandler.this.targetChannel = null;
+								ctx.channel().writeAndFlush(new CloseMessage());
+							}
+						};
+						if (executor.inEventLoop()){
+							closeTask.run();
+						}else{
+							executor.execute(closeTask);
+						}
+					});
 					LogUtil.info(() -> channelToServer + " connect success");
 					ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 				};
