@@ -2,7 +2,6 @@ package common.resource;
 
 public class SystemConfig {
     public static final int COUNT_OF_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    public static final int timeout=120;
     public static final int SUCCESS=1;
     public static final int FAILED=0;
 
@@ -14,13 +13,5 @@ public class SystemConfig {
     public static final int LENGTH_HEADER_LENGTH=4;
 
 	public static final int PACKAGE_MAX_LENGTH = 64 * 1024;
-
-    /**address config**/
-    public static final String PROXY_SERVER_ADDRESS ; //tencent
-    public static final int PROXY_SERVER_PORT = 9002;
-
-    static {
-        PROXY_SERVER_ADDRESS = "";
-    }
 
 }

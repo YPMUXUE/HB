@@ -2,6 +2,7 @@ package common;
 
 
 import java.io.InputStream;
+import java.net.URL;
 
 public class ResourceLoader {
 	private static final ClassLoader CLASS_LOADER;
@@ -11,5 +12,8 @@ public class ResourceLoader {
 	}
 	public static InputStream getResource(String path){
 		return CLASS_LOADER.getResourceAsStream(path);
+	}
+	public static URL getURL(String path){
+		return CLASS_LOADER.getResource(path);
 	}
 }

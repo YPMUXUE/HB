@@ -8,7 +8,6 @@ import common.log.LogUtil;
 import common.message.frame.Message;
 import common.message.frame.bind.BindV2Message;
 import common.resource.StaticConfig;
-import common.resource.SystemConfig;
 import common.util.Connections;
 import common.util.HandlerHelper;
 import io.netty.channel.*;
@@ -94,7 +93,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				Runnable task = ()->{
 					//删除当前连接RequestToClient下ChannelHandler
 					ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
-					ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS));
+					ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
 					ctx.pipeline().addLast("ClientTransferHandler", new ClientTransferHandler(channel, false));
 					ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
 

@@ -61,6 +61,19 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+<!--                    <include>**/*</include>-->
+                </includes>
+                <excludes>
+                    <exclude>**/*</exclude>
+                </excludes>
+                <filtering>true</filtering>
+            </resource>
+
+        </resources>
     </build>
 
     <dependencies>

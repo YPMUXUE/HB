@@ -13,7 +13,7 @@ import common.message.frame.establish.ConnectionEstablishFailedMessage;
 import common.message.frame.establish.ConnectionEstablishMessage;
 import common.message.frame.login.LoginMessage;
 import common.resource.ConnectionEvents;
-import common.resource.SystemConfig;
+import common.resource.StaticConfig;
 import common.util.Connections;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -101,7 +101,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
 				ChannelPipeline pipeline = ch.pipeline();
-				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(SystemConfig.timeout));
+				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(StaticConfig.timeout));
 				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel()));
 			}
 		};

@@ -5,7 +5,6 @@ import common.Message;
 import common.handler.EventLoggerHandler;
 import common.log.LogUtil;
 import common.resource.StaticConfig;
-import common.resource.SystemConfig;
 import common.util.Connections;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -71,7 +70,7 @@ public class HttpMethodHandler extends SimpleChannelInboundHandler<FullHttpReque
 
                 //删除所有RequestToClient下ChannelHandler
                 ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
-                ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(SystemConfig.timeout, TimeUnit.SECONDS))
+                ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS))
                         .addLast(clientTransferHandler, new ClientTransferHandler(channelToProxyServer, true, ClientTransferHandler.HTTPS_PROCESSOR))
                         .addLast("EventLoggerHandler", new EventLoggerHandler("ClientToProxyServer", true));
 
