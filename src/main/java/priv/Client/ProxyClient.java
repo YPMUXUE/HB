@@ -45,7 +45,7 @@ public class ProxyClient {
     }
 
     public static void main(String[] args) throws Exception {
-        InetSocketAddress address=new InetSocketAddress(InetAddress.getLoopbackAddress(),9001);
+        InetSocketAddress address=new InetSocketAddress(InetAddress.getByName(StaticConfig.LOCAL_HOST_ADDRESS),StaticConfig.LOCAL_HOST_PORT);
         ProxyClient proxyClient=new ProxyClient(address, new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {

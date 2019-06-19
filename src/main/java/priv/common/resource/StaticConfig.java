@@ -10,9 +10,12 @@ import java.util.Properties;
 
 public class StaticConfig {
     /**address config**/
-    public static String PROXY_SERVER_ADDRESS = "127.0.0.1"; //tencent
-    public static int PROXY_SERVER_PORT = 9002;
+    public static String PROXY_SERVER_ADDRESS = null;
+    public static int PROXY_SERVER_PORT = 0;
     public static int timeout=120;
+
+    public static String LOCAL_HOST_ADDRESS="127.0.0.1";
+    public static int LOCAL_HOST_PORT=9001;
 
     static {
         try (InputStream resource = ResourceLoader.getResource("config.properties")) {
