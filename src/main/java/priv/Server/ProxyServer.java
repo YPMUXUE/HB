@@ -5,6 +5,7 @@ import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
 import priv.common.log.LogUtil;
+import priv.common.resource.StaticConfig;
 import priv.common.util.HandlerHelper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -37,7 +38,7 @@ public class ProxyServer {
 
 
     public static void main(String[] args) throws Exception {
-        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress("127.0.0.1",9002), new ChannelInitializer() {
+        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(StaticConfig.LOCAL_HOST_ADDRESS,StaticConfig.LOCAL_HOST_PORT), new ChannelInitializer() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();

@@ -83,10 +83,10 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <includes>
-                    <include>**/*</include>
+<!--                    <include>**/*</include>-->
                 </includes>
                 <excludes>
-                    <!--<exclude>**/*</exclude>-->
+                    <exclude>config.properties</exclude>
                 </excludes>
                 <filtering>true</filtering>
             </resource>
