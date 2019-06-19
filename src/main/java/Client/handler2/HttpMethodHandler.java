@@ -70,19 +70,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				ch.pipeline().addLast("SimpleTransferHandler", new SimpleTransferHandler(ctx.channel(), true));
 				//log
 				ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler("ClientToProxyServer",true));
-				ch.pipeline().addLast("test",new ChannelDuplexHandler(){
-					@Override
-					public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-						System.out.println("123123123123");
-						super.close(ctx, promise);
-					}
 
-					@Override
-					public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-						System.out.println("inactive");
-						super.channelInactive(ctx);
-					}
-				});
 			}
 		};
 		ChannelFuture future = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
