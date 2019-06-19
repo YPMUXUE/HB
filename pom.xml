@@ -18,13 +18,13 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <MainClass>Server.ProxyServer</MainClass>
+                <MainClass>priv.Server.ProxyServer</MainClass>
             </properties>
         </profile>
         <profile>
             <id>c</id>
             <properties>
-                <MainClass>Client.ProxyClient</MainClass>
+                <MainClass>priv.Client.ProxyClient</MainClass>
             </properties>
         </profile>
     </profiles>

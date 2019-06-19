@@ -1,4 +1,4 @@
-import common.resource.ConnectionEvents;
+import priv.common.resource.ConnectionEvents;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
