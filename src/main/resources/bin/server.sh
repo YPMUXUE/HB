@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 cd ..
-APP_DIR=/`pwd`
+APP_DIR=`pwd`
 echo 'APP_DIR:'${APP_DIR}
 
 LOG_DIR=${APP_DIR}/log
