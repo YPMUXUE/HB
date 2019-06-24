@@ -18,7 +18,7 @@ else
 MAIN_CLASS=$1
 fi
 
-CLASSPATH=`ls ${LIB_DIR} | awk '{jars[NR]=$0}END{list="";for(i in jars){if(list!=""){list=list":"}list=list"'${LIB_DIR}'/"jars[i];}print list;}'`
+CLASSPATH=`ls ${LIB_DIR} | awk '/^.*\.jar/{jars[NR]=$0}END{list="";for(i in jars){if(list!=""){list=list":"}list=list"'${LIB_DIR}'/"jars[i];}print list;}'`
 
 nohup java -DAppName=HB -classpath ${CONF_DIR}:${CLASSPATH} ${MAIN_CLASS} > ${LOG_DIR}/stdout.log 2>&1 &
 
