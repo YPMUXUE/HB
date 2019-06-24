@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.InetAddress;
@@ -49,8 +50,13 @@ public class PacServer {
             FullHttpRequest req= (FullHttpRequest) msg;
             System.out.println(req.uri());
             FileInputStream fins= new FileInputStream(pacFile);
-            byte[] result=new byte[fins.available()];
-            fins.read(result);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] temp = new byte[1024];
+            int i;
+            while ((i=fins.read(temp))!=-1){
+                out.write(temp,0,i);
+            }
+            byte[] result=out.toByteArray();
             ctx.write(Unpooled.buffer().writeBytes(("HTTP/1.1 200 OK\r\n" +
                     "Server: yp\r\n" +
                     "Content-Type: application/x-ns-proxy-autoconfig\r\n" +

@@ -12,6 +12,6 @@ public class SystemConfig {
     public static final int HEADER_LENGTH=2;
     public static final int LENGTH_HEADER_LENGTH=4;
 
-	public static final int PACKAGE_MAX_LENGTH = 64 * 1024;
+	public static final int PACKAGE_MAX_LENGTH = 64 * 1024 * 1024;
 
 }

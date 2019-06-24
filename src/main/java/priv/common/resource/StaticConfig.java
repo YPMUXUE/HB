@@ -18,7 +18,7 @@ public class StaticConfig {
     public static int LOCAL_HOST_PORT=9001;
 
     static {
-        try (InputStream resource = ResourceLoader.getResource("config.properties")) {
+        try (InputStream resource = ResourceLoader.getResource("conf/config.properties")) {
             if (resource == null) {
                 throw new RuntimeException("找不到config.properties");
             }

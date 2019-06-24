@@ -3,6 +3,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import priv.common.resource.StaticConfig;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -23,7 +24,7 @@ public class ConsoleOutputServer {
             }
         });
         InetAddress host=InetAddress.getLocalHost();
-        SocketAddress address=new InetSocketAddress(InetAddress.getLoopbackAddress(),8080);
+        SocketAddress address=new InetSocketAddress(StaticConfig.LOCAL_HOST_ADDRESS,8080);
         ChannelFuture future = serverBootstrap.bind(address);
         future.syncUninterruptibly();
     }
