@@ -1,6 +1,7 @@
 package priv.Client.handler2;
 
 import priv.common.handler.SimpleTransferHandler;
+import priv.common.log.LogUtil;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.close.CloseMessage;
 import priv.common.message.frame.connect.ConnectMessage;
@@ -20,6 +21,7 @@ public class ClientTransferHandler extends SimpleTransferHandler {
         if (msg instanceof ConnectionEstablishMessage) {
             return Unpooled.buffer().writeBytes(HttpResources.HttpResponse.Connection_Established.getBytes(Charset.forName("utf-8")));
         } else if(msg instanceof ConnectionEstablishFailedMessage) {
+            LogUtil.info(()->((ConnectionEstablishFailedMessage) msg).getReason());
             return Unpooled.buffer().writeBytes(HttpResources.HttpResponse.Connection_Failed.getBytes(Charset.forName("utf-8")));
         }else if (msg instanceof ConnectMessage){
             return ((ConnectMessage) msg).getContent();

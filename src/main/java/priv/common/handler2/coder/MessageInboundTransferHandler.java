@@ -32,6 +32,7 @@ public class MessageInboundTransferHandler extends ChannelInboundHandlerAdapter 
 			short code = ((ByteBuf) msg).getShort(0);
 			MessageTranslator messageTranslator = messageTranslatorFactory.find(code);
 			Message message = messageTranslator.translate((ByteBuf) msg);
+			//connect内需要先retain一下，以防代理数据被释放,其他情况下默认释放bytebuf
 			((ByteBuf) msg).release();
 			ctx.fireChannelRead(message);
 		}else{

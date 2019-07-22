@@ -8,13 +8,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
+import priv.common.ResourceLoader;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URL;
 import java.nio.charset.Charset;
 
 public class PacServer {
@@ -29,7 +29,7 @@ public class PacServer {
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(new HttpRequestDecoder())
                         .addLast(new HttpObjectAggregator(8*8*1024))
-                        .addLast(new PacHandler("C:\\Users\\YP\\Desktop\\pac.txt"));
+                        .addLast(new PacHandler());
                     }
                 });
         InetAddress host=InetAddress.getLocalHost();
@@ -39,9 +39,25 @@ public class PacServer {
     }
 
     private static class PacHandler extends ChannelDuplexHandler {
-        private File pacFile;
-        public PacHandler(String filePath) {
-            pacFile=new File(filePath);
+        private static final String DEFAULT_PAC = "function FindProxyForURL(url, host) {\n" +
+                "\treturn \"PROXY 127.0.0.1:9001\";\n" +
+                "}";
+        private byte[] pacDate;
+
+        public PacHandler() throws IOException {
+            InputStream resource = ResourceLoader.getResource("pac.pac");
+            if (resource != null) {
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                byte[] temp = new byte[1024];
+                int i = 0;
+                while ((i = resource.read(temp)) != -1) {
+                    byteArrayOutputStream.write(temp, 0, i);
+                }
+                pacDate = byteArrayOutputStream.toByteArray();
+            }else{
+                pacDate = DEFAULT_PAC.getBytes();
+            }
+
         }
 
         @Override
@@ -49,21 +65,13 @@ public class PacServer {
             assert msg instanceof FullHttpRequest;
             FullHttpRequest req= (FullHttpRequest) msg;
             System.out.println(req.uri());
-            FileInputStream fins= new FileInputStream(pacFile);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] temp = new byte[1024];
-            int i;
-            while ((i=fins.read(temp))!=-1){
-                out.write(temp,0,i);
-            }
-            byte[] result=out.toByteArray();
             ctx.write(Unpooled.buffer().writeBytes(("HTTP/1.1 200 OK\r\n" +
                     "Server: yp\r\n" +
                     "Content-Type: application/x-ns-proxy-autoconfig\r\n" +
-                    "Content-Length: "+result.length+"\r\n" +
+                    "Content-Length: "+pacDate.length+"\r\n" +
                     "Connection: Close\r\n" +
                     "\r\n").getBytes(Charset.forName("ascii"))));
-            ctx.writeAndFlush(Unpooled.buffer().writeBytes(result));
+            ctx.writeAndFlush(Unpooled.buffer().writeBytes(pacDate));
             ((FullHttpRequest) msg).release();
             ctx.writeAndFlush("\r\n");
             ctx.close();
