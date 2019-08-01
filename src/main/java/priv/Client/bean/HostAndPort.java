@@ -1,7 +1,7 @@
 package priv.Client.bean;
 
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -9,20 +9,90 @@ import java.net.UnknownHostException;
 public class HostAndPort {
     private String host;
     private String port;
+    private String protocol;
     public static HostAndPort resolve(FullHttpRequest req){
-        if (HttpMethod.CONNECT.equals(req.method())){
-            return resolve(req.uri());
-        }else {
-            return resolve(req.uri(),req.headers().get("Host"));
-        }
+        return resolveNew(req.uri(),req.headers().get("Host"));
     }
 
-    public static HostAndPort resolve(String uri) {
+    public static HostAndPort resolveNew(String uri, String hostHeader) {
         HostAndPort result=new HostAndPort();
-        result.host = uri.substring(0, uri.lastIndexOf(":"));
-        result.port = uri.substring(uri.lastIndexOf(":") + 1);
+
+        ///////////////uri
+        int i;
+        //http://www.example.com:8080/x?x=1 =======> www.example.com:8080/x?x=1
+        if ((i = uri.indexOf("://")) >= 0) {
+            String protocol = uri.substring(0, i);
+            result.port = Protocol.valueOf(protocol).getPort();
+            uri = uri.substring(i + 3);
+        }
+        // www.example.com:8080/x?x:=1 ======> www.example.com:8080
+        if ((i = uri.indexOf("/"))>0){
+            uri = uri.substring(0,i);
+        }
+        //www.example.com:8080 =======> www.example.com
+        if ((i = uri.indexOf(":"))>0) {
+            result.port = uri.substring(i + 1);
+            result.host = uri.substring(0, i);
+        }
+
+
+        /////hostHeader
+        if (StringUtils.isNotEmpty(hostHeader)){
+            i=0;
+            //http://www.example.com:8080/x?x=1 =======> www.example.com:8080/x?x=1
+            if ((i = hostHeader.indexOf("://")) >= 0){
+                result.protocol = hostHeader.substring(0,i);
+                hostHeader = hostHeader.substring(i+3);
+                result.port = Protocol.valueOf(result.protocol).getPort();
+            }
+
+            // www.example.com:8080/x?x:=1 ======> www.example.com:8080
+            if ((i = hostHeader.indexOf("/"))>0){
+                hostHeader = hostHeader.substring(0,i);
+            }
+
+            //www.example.com:8080 =======> www.example.com
+            if ((i = hostHeader.indexOf(":")) >= 0){
+                result.port = hostHeader.substring(i + 1);
+                result.host = hostHeader.substring(0, i);
+            }
+        }
+
+        if (StringUtils.isEmpty(result.host) || StringUtils.isEmpty(result.port)){
+            throw new NullPointerException("Host or Port can not be null");
+        }
+
+
+
         return result;
     }
+
+//    private static void resolve(String str , HostAndPort hostAndPort){
+//        int i;
+//        // http://www.example.com:8080/x?x=1
+//        if ((i = str.indexOf("://")) >= 0) {
+//            String protocol = str.substring(0, i);
+//            hostAndPort.port = Protocol.valueOf(protocol).getPort();
+//            str = str.substring(i + 3);
+//        }
+//        // www.example.com:8080/x?x=1
+//        if (str.startsWith("/")){
+//            str = str.substring(1);
+//        }
+//        // www.example.com:8080/x?x=1
+//        if ((i = str.indexOf("/"))>0){
+//            str = str.substring(0,i);
+//        }
+//        // www.example.com:8080
+//        if ((i = str.indexOf(":"))>0) {
+//            hostAndPort.port = str.substring(i + 1);
+//            str = str.substring(0, i);
+//        }
+//        // www.example.com
+//        hostAndPort.host = str;
+//
+//
+//    }
 
     public static HostAndPort resolve(String uri, String host) {
         HostAndPort result=new HostAndPort();
@@ -48,45 +118,6 @@ public class HostAndPort {
                 result.host = host;
             }
         }
-        return result;
-    }
-
-    @Deprecated
-    private static HostAndPort resolvePlainRequest(FullHttpRequest req) {
-        HostAndPort result=new HostAndPort();
-        final String uri=req.uri();
-        if (!uri.startsWith("/")) {
-            String protocol = uri.substring(0, uri.indexOf("://"));
-            String hostAndPort = uri.substring(uri.indexOf("://") + 3);
-            if (hostAndPort.contains("/")) {
-                hostAndPort = hostAndPort.substring(0, hostAndPort.indexOf("/"));
-            }
-            if (hostAndPort.contains(":")) {
-                result.port = hostAndPort.substring(hostAndPort.indexOf(":") + 1);
-                result.host = hostAndPort.substring(0, hostAndPort.indexOf(":"));
-            } else {
-                result.port = Protocol.valueOf(protocol).getPort();
-                result.host = hostAndPort;
-            }
-        }else{
-          final String hostAndPort=req.headers().get("Host");
-            if (hostAndPort.contains(":")) {
-                result.port = hostAndPort.substring(hostAndPort.indexOf(":") + 1);
-                result.host = hostAndPort.substring(0, hostAndPort.indexOf(":"));
-            } else {
-                result.port = "80";
-                result.host = hostAndPort;
-            }
-        }
-            return result;
-    }
-
-    @Deprecated
-    private static HostAndPort resolveConnectRequest(FullHttpRequest req) {
-        HostAndPort result=new HostAndPort();
-        final String uri = req.uri();
-        result.host = uri.substring(0, uri.lastIndexOf(":"));
-        result.port = uri.substring(uri.lastIndexOf(":") + 1);
         return result;
     }
 
@@ -122,5 +153,14 @@ public class HostAndPort {
     @Override
     public int hashCode() {
         return this.host.hashCode()^this.port.hashCode();
+    }
+
+    public static void main(String[] args) {
+//        String url = "http://www.example.com:8080/test?t=1";
+//        String host = "http://www.example.com";
+        String url = "103.254.188.50:80";
+        String host = "103.254.188.50:80";
+        HostAndPort resolve = resolveNew(url, host);
+        System.out.println(resolve.host+"----"+resolve.port);
     }
 }
