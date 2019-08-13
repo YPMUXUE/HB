@@ -81,6 +81,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			address = new InetSocketAddress(InetAddress.getByName(host), port);
 		} catch (UnknownHostException e) {
 			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:" + host));
+			LogUtil.info(()->"unknown Host:"+host);
 			//note: 先不主动关闭连接 等超时handler触发了再关闭
 			return;
 		}

@@ -15,55 +15,54 @@ public class HostAndPort {
     }
 
     public static HostAndPort resolveNew(String uri, String hostHeader) {
-        HostAndPort result=new HostAndPort();
+        HostAndPort result = new HostAndPort();
 
         ///////////////uri
-        int i;
-        //http://www.example.com:8080/x?x=1 =======> www.example.com:8080/x?x=1
-        if ((i = uri.indexOf("://")) >= 0) {
-            String protocol = uri.substring(0, i);
-            result.port = Protocol.valueOf(protocol).getPort();
-            uri = uri.substring(i + 3);
-        }
-        // www.example.com:8080/x?x:=1 ======> www.example.com:8080
-        if ((i = uri.indexOf("/"))>0){
-            uri = uri.substring(0,i);
-        }
-        //www.example.com:8080 =======> www.example.com
-        if ((i = uri.indexOf(":"))>0) {
-            result.port = uri.substring(i + 1);
-            result.host = uri.substring(0, i);
+        if (!uri.startsWith("/")) {
+            int i;
+            //http://www.example.com:8080/x?x=1 =======> www.example.com:8080/x?x=1
+            if ((i = uri.indexOf("://")) >= 0) {
+                String protocol = uri.substring(0, i);
+                result.port = Protocol.valueOf(protocol).getPort();
+                uri = uri.substring(i + 3);
+            }
+            // www.example.com:8080/x?x:=1 ======> www.example.com:8080
+            if ((i = uri.indexOf("/")) > 0) {
+                uri = uri.substring(0, i);
+            }
+            //www.example.com:8080 =======> www.example.com
+            if ((i = uri.indexOf(":")) > 0) {
+                result.port = uri.substring(i + 1);
+                result.host = uri.substring(0, i);
+            }
         }
 
 
         /////hostHeader
-        if (StringUtils.isNotEmpty(hostHeader)){
-            i=0;
+        if (StringUtils.isNotEmpty(hostHeader)) {
+            int i;
             //http://www.example.com:8080/x?x=1 =======> www.example.com:8080/x?x=1
-            if ((i = hostHeader.indexOf("://")) >= 0){
-                result.protocol = hostHeader.substring(0,i);
-                hostHeader = hostHeader.substring(i+3);
+            if ((i = hostHeader.indexOf("://")) >= 0) {
+                result.protocol = hostHeader.substring(0, i);
+                hostHeader = hostHeader.substring(i + 3);
                 result.port = Protocol.valueOf(result.protocol).getPort();
             }
 
             // www.example.com:8080/x?x:=1 ======> www.example.com:8080
-            if ((i = hostHeader.indexOf("/"))>0){
-                hostHeader = hostHeader.substring(0,i);
+            if ((i = hostHeader.indexOf("/")) > 0) {
+                hostHeader = hostHeader.substring(0, i);
             }
 
             //www.example.com:8080 =======> www.example.com
-            if ((i = hostHeader.indexOf(":")) >= 0){
+            if ((i = hostHeader.indexOf(":")) >= 0) {
                 result.port = hostHeader.substring(i + 1);
                 result.host = hostHeader.substring(0, i);
             }
         }
 
-        if (StringUtils.isEmpty(result.host) || StringUtils.isEmpty(result.port)){
+        if (StringUtils.isEmpty(result.host) || StringUtils.isEmpty(result.port)) {
             throw new NullPointerException("Host or Port can not be null");
         }
-
-
-
         return result;
     }
 
