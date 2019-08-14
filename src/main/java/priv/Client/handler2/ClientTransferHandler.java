@@ -26,7 +26,7 @@ public class ClientTransferHandler extends SimpleTransferHandler {
         }else if (msg instanceof ConnectMessage){
             return ((ConnectMessage) msg).getContent();
         }else if (msg instanceof CloseMessage){
-            ctx.channel().close();
+            ctx.executor().execute(()->ctx.channel().close());
             return null;
         }else{
             throw new UnsupportedOperationException(msg.getClass().toString());

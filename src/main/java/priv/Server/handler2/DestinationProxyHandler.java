@@ -1,6 +1,9 @@
 package priv.Server.handler2;
 
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.*;
+import io.netty.util.concurrent.EventExecutor;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler.SimpleTransferHandler;
 import priv.common.log.LogUtil;
@@ -15,18 +18,13 @@ import priv.common.message.frame.login.LoginMessage;
 import priv.common.resource.ConnectionEvents;
 import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
@@ -123,8 +121,9 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 					channelToServer.closeFuture().addListener((closeFuture)->{
 						Runnable closeTask = ()->{
 							if (channelToServer.equals(DestinationProxyHandler.this.targetChannel)){
-								LogUtil.info(()->"server close the connection"+channelToServer);
+								LogUtil.info(()->"closeFuture triggered"+channelToServer);
 								DestinationProxyHandler.this.targetChannel = null;
+								DestinationProxyHandler.this.writeable = false;
 								ctx.channel().writeAndFlush(new CloseMessage());
 							}
 						};
