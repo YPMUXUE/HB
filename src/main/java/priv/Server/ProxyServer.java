@@ -38,7 +38,7 @@ public class ProxyServer {
 
 
     public static void main(String[] args) throws Exception {
-        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(StaticConfig.LOCAL_HOST_ADDRESS,StaticConfig.LOCAL_HOST_PORT), new ChannelInitializer() {
+        ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT), new ChannelInitializer() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();

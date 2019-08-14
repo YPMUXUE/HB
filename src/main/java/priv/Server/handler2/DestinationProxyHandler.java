@@ -23,17 +23,24 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 
 	private Channel targetChannel;
 	private final boolean closeTargetChannel;
+	private final BlockingQueue<PendingWriteItem> pendingData = new LinkedBlockingQueue<>();
 //    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
 
 	static {
 
 	}
+
+	private boolean writeable;
 
 	public DestinationProxyHandler() {
 		this.closeTargetChannel = false;
@@ -106,15 +113,13 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel()));
 			}
 		};
-		EventExecutor executor = ctx.executor();
-
+		EventExecutor handlerExecutor = ctx.executor();
 		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, initializerToNewConnection);
 		Channel channelToServer = connectToServer.channel();
 		connectToServer.addListener((f) -> {
 			if (f.isSuccess()) {
 				Runnable task = () -> {
 					DestinationProxyHandler.this.targetChannel = channelToServer;
-
 					channelToServer.closeFuture().addListener((closeFuture)->{
 						Runnable closeTask = ()->{
 							if (channelToServer.equals(DestinationProxyHandler.this.targetChannel)){
@@ -123,19 +128,23 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 								ctx.channel().writeAndFlush(new CloseMessage());
 							}
 						};
-						if (executor.inEventLoop()){
+						if (handlerExecutor.inEventLoop()){
 							closeTask.run();
 						}else{
-							executor.execute(closeTask);
+							handlerExecutor.execute(closeTask);
 						}
 					});
 					LogUtil.info(() -> channelToServer + " connect success");
+
 					ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+					DestinationProxyHandler.this.writeable = true;
+					writePendingData(ctx);
 				};
-				if (executor.inEventLoop()){
+
+				if (handlerExecutor.inEventLoop()){
 					task.run();
 				}else {
-					executor.execute(task);
+					handlerExecutor.execute(task);
 				}
 			} else {
 				LogUtil.info(() -> channelToServer + " connect failed");
@@ -152,6 +161,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			});
 			this.targetChannel = null;
 		}
+		this.writeable = false;
 	}
 
 	@Override
@@ -159,7 +169,11 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		if (msg instanceof ByteBuf) {
 			msg = new ConnectMessage((ByteBuf) msg);
 		}
-		super.write(ctx, msg, promise);
+		if (!this.writeable){
+			pendingData.add(new PendingWriteItem(msg, promise));
+		}else{
+			super.write(ctx, msg, promise);
+		}
 	}
 
 	@Override
@@ -170,5 +184,27 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			});
 		}
 		super.close(ctx, promise);
+	}
+
+	private void writePendingData(ChannelHandlerContext ctx){
+		if (pendingData.size() > 0) {
+			for (int i = pendingData.size() - 1; i >= 0; i--) {
+				PendingWriteItem item = pendingData.poll();
+				if (item != null) {
+					ctx.write(item.data, item.promise);
+				}
+			}
+		}
+		ctx.flush();
+	}
+
+	private static class PendingWriteItem {
+		private Object data;
+		private ChannelPromise promise;
+
+		public PendingWriteItem(Object data, ChannelPromise promise) {
+			this.data = data;
+			this.promise = promise;
+		}
 	}
 }

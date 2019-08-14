@@ -18,11 +18,11 @@ import java.util.function.BiConsumer;
 
 public class Connections {
     private static final Bootstrap defaultBootstrap=new Bootstrap();
-    static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+    public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     public static ChannelFuture connect(EventLoop eventLoop, SocketAddress address, ChannelInitializer channelInitializer){
         Bootstrap bootstrap = defaultBootstrap.clone();
-        bootstrap.group(eventLoop)
+        bootstrap.group(eventLoop == null ?  eventLoopGroup: eventLoop)
                 .channel(NioSocketChannel.class)
                 .handler(channelInitializer);
         return bootstrap.connect(address);

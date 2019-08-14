@@ -39,7 +39,7 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
         if (logClose) {
             LogUtil.info(() -> moduleName + " : " + ctx.channel() + "call close.");
         }
-        promise.addListener(LogUtil.LOG_IF_FAILED);
+//         promise.addListener(LogUtil.LOG_IF_FAILED);
         super.close(ctx, promise);
     }
 

@@ -34,6 +34,8 @@ public class HostAndPort {
             if ((i = uri.indexOf(":")) > 0) {
                 result.port = uri.substring(i + 1);
                 result.host = uri.substring(0, i);
+            }else{
+                result.host = uri;
             }
         }
 
@@ -57,6 +59,8 @@ public class HostAndPort {
             if ((i = hostHeader.indexOf(":")) >= 0) {
                 result.port = hostHeader.substring(i + 1);
                 result.host = hostHeader.substring(0, i);
+            }else{
+                result.host = hostHeader;
             }
         }
 
