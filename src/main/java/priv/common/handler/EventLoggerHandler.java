@@ -45,6 +45,7 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        LogUtil.info(() -> moduleName + " : " + ctx.channel() + "channel Inactive.");
         super.channelInactive(ctx);
     }
 }

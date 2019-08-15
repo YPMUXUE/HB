@@ -193,8 +193,8 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 					ctx.write(item.data, item.promise);
 				}
 			}
+			ctx.flush();
 		}
-		ctx.flush();
 	}
 
 	private static class PendingWriteItem {

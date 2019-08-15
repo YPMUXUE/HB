@@ -1,6 +1,7 @@
 package priv.common.handler;
 
 import io.netty.channel.*;
+import priv.common.log.LogUtil;
 
 public class SimpleTransferHandler extends ChannelDuplexHandler {
     protected final Channel targetChannel;
@@ -20,7 +21,7 @@ public class SimpleTransferHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 //        LogUtil.debug(()->(((ByteBuf)msg).toString(Charset.forName("utf-8"))));
 
-        targetChannel.writeAndFlush(msg);
+        targetChannel.writeAndFlush(msg).addListener(LogUtil.LOG_IF_FAILED);
     }
 
 
