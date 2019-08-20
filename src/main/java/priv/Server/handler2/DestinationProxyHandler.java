@@ -218,7 +218,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		if (Objects.equals(targetChannel,this.targetChannel)){
 			LogUtil.info(()->"closeFuture triggered"+targetChannel);
 			removeOldConnection(false);
-			ctx.channel().writeAndFlush(new CloseMessage());
+			ctx.writeAndFlush(new CloseMessage());
 		}
 	}
 
