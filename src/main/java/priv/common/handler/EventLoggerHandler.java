@@ -29,14 +29,14 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LogUtil.info(() -> moduleName + " : " + exceptionHandler.apply(ctx, cause));
+        LogUtil.info(() -> "EventLoggerHandler#exceptionCaught:"+moduleName + " : " + exceptionHandler.apply(ctx, cause));
         ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (logClose) {
-            LogUtil.info(() -> moduleName + " : " + ctx.channel() + "call close.");
+            LogUtil.info(() -> "EventLoggerHandler#close:"+moduleName + " : " + ctx.channel() + "call close.");
         }
 //         promise.addListener(LogUtil.LOG_IF_FAILED);
         super.close(ctx, promise);
@@ -44,7 +44,7 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        LogUtil.info(() -> moduleName + " : " + ctx.channel() + "channel Inactive.");
+        LogUtil.info(() -> "EventLoggerHandler#channelInactive:"+moduleName + " : " + ctx.channel() + "channel Inactive.");
         super.channelInactive(ctx);
     }
 }
