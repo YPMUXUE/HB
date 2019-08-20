@@ -3,7 +3,7 @@ package priv.Server.handler2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
-import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.ReferenceCountUtil;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler.SimpleTransferHandler;
 import priv.common.log.LogUtil;
@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -30,7 +31,11 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 
 	private Channel targetChannel;
+
+	private boolean writeable;
+
 	private final boolean closeTargetChannel;
+
 	private final BlockingQueue<PendingWriteItem> pendingData = new LinkedBlockingQueue<>();
 //    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
 
@@ -38,10 +43,9 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	}
 
-	private boolean writeable;
 
 	public DestinationProxyHandler() {
-		this.closeTargetChannel = false;
+		this.closeTargetChannel = true;
 		this.targetChannel = null;
 	}
 
@@ -78,9 +82,13 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void handleBindV2(ChannelHandlerContext ctx, BindV2Message m) throws Exception {
-		removeOldConnection(ctx, m);
+		if (!prepareConnect()){
+			ReferenceCountUtil.release(m);
+			return;
+		}
 		String host = m.getHostName();
 		int port = m.getPort();
+		ReferenceCountUtil.release(m);
 		InetSocketAddress address;
 		try {
 			address = new InetSocketAddress(InetAddress.getByName(host), port);
@@ -95,8 +103,12 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void handleBindV1(ChannelHandlerContext ctx, BindV1Message m) throws Exception {
-		removeOldConnection(ctx, m);
+		if (!prepareConnect()){
+			ReferenceCountUtil.release(m);
+			return;
+		}
 		byte[] des = m.getDestination();
+		ReferenceCountUtil.release(m);
 		InetSocketAddress address = new InetSocketAddress(InetAddress.getByAddress(new byte[]{des[0], des[1], des[2], des[3]}), ((des[4] & 0xFF) << 8) | (des[5] & 0xFF));
 		this.doConnect(ctx, address);
 	}
@@ -108,52 +120,47 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			protected void initChannel(Channel ch) throws Exception {
 				ChannelPipeline pipeline = ch.pipeline();
 				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(StaticConfig.timeout));
-				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel()));
+				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel(),false));
 			}
 		};
-		EventExecutor handlerExecutor = ctx.executor();
+
 		ChannelFuture connectToServer = Connections.connect(ctx.channel().eventLoop(), address, initializerToNewConnection);
-		Channel channelToServer = connectToServer.channel();
-		connectToServer.addListener((f) -> {
-			if (f.isSuccess()) {
-				Runnable task = () -> {
-					DestinationProxyHandler.this.targetChannel = channelToServer;
-					channelToServer.closeFuture().addListener((closeFuture)->{
-						Runnable closeTask = ()->{
-							if (channelToServer.equals(DestinationProxyHandler.this.targetChannel)){
-								LogUtil.info(()->"closeFuture triggered"+channelToServer);
-								DestinationProxyHandler.this.targetChannel = null;
-								DestinationProxyHandler.this.writeable = false;
-								ctx.channel().writeAndFlush(new CloseMessage());
-							}
-						};
-						if (handlerExecutor.inEventLoop()){
-							closeTask.run();
-						}else{
-							handlerExecutor.execute(closeTask);
-						}
-					});
-					LogUtil.info(() -> channelToServer + " connect success");
 
-					ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-					DestinationProxyHandler.this.writeable = true;
-					writePendingData(ctx);
+		connectToServer.addListener((ChannelFutureListener) f -> {
+			Runnable callback;
+			Channel channelToServer = f.channel();
+			if (f.isSuccess()){
+				callback = new Runnable() {
+					@Override
+					public void run() {
+						LogUtil.info(() -> channelToServer + " connect success");
+						onTargetSuccess(ctx, channelToServer);
+						channelToServer.closeFuture().addListener((ChannelFutureListener) f->{
+							onTargetClose(ctx, f.channel());
+						});
+					}
 				};
-
-				if (handlerExecutor.inEventLoop()){
-					task.run();
-				}else {
-					handlerExecutor.execute(task);
-				}
-			} else {
-				LogUtil.info(() -> channelToServer + " connect failed");
-				ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.CLOSE);
+			}else{
+				callback = new Runnable() {
+					@Override
+					public void run() {
+						LogUtil.info(() -> channelToServer + " connect failed");
+						onTargetFailed(ctx, channelToServer);
+					}
+				};
 			}
+			ctx.executor().execute(callback);
 		});
+
 	}
 
-	private void removeOldConnection(ChannelHandlerContext ctx, Message m) {
-		if (this.targetChannel != null) {
+	private boolean prepareConnect() {
+		removeOldConnection(true);
+		return true;
+	}
+
+	private void removeOldConnection(boolean closeTargetChannel){
+		if (this.targetChannel != null && closeTargetChannel) {
 			this.targetChannel.eventLoop().submit(() -> {
 				if (targetChannel.isActive())
 					targetChannel.close();
@@ -197,11 +204,29 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	private void onTargetFailed(ChannelHandlerContext ctx, Channel channelToServer) {
+		LogUtil.info(() -> channelToServer + " connect failed");
+		ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+	}
+	private void onTargetSuccess(ChannelHandlerContext ctx, Channel targetChannel){
+		this.targetChannel = targetChannel;
+		this.writeable = true;
+		ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+		writePendingData(ctx);
+	}
+	private void onTargetClose(ChannelHandlerContext ctx, Channel targetChannel){
+		if (Objects.equals(targetChannel,this.targetChannel)){
+			LogUtil.info(()->"closeFuture triggered"+targetChannel);
+			removeOldConnection(false);
+			ctx.channel().writeAndFlush(new CloseMessage());
+		}
+	}
+
 	private static class PendingWriteItem {
 		private Object data;
 		private ChannelPromise promise;
 
-		public PendingWriteItem(Object data, ChannelPromise promise) {
+		private PendingWriteItem(Object data, ChannelPromise promise) {
 			this.data = data;
 			this.promise = promise;
 		}

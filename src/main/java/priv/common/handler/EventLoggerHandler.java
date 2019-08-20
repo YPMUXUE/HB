@@ -30,7 +30,6 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LogUtil.info(() -> moduleName + " : " + exceptionHandler.apply(ctx, cause));
-        LogUtil.info(() -> moduleName + " : " + ctx.channel() + "start to close channel");
         ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
     }
 
