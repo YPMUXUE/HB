@@ -1,20 +1,22 @@
 package priv.Client.handler2;
 
-import priv.Client.bean.HostAndPort;
-import priv.common.Message;
-import priv.common.handler.SimpleTransferHandler;
-import priv.common.log.LogUtil;
-import priv.common.resource.ConnectionEvents;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import priv.Client.bean.HostAndPort;
+import priv.common.Message;
+import priv.common.handler.SimpleTransferHandler;
+import priv.common.resource.ConnectionEvents;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class PendingWriteTransferHandler extends SimpleTransferHandler {
+    private static final Logger logger = LoggerFactory.getLogger(PendingWriteTransferHandler.class);
     private BlockingQueue<PendingWriteItem> pendingWrite = null;
     private boolean connectEstablish = false;
 
@@ -52,7 +54,7 @@ public class PendingWriteTransferHandler extends SimpleTransferHandler {
                     handleResponse(ctx, (Message) msg);
                 }
             }catch (Exception e){
-                LogUtil.info(()->"connect to proxy server error result:"+e.toString());
+                logger.error("connect to proxy server error result:"+e.toString());
                 ReferenceCountUtil.release(msg);
                 clearPendingWrite();
                 ctx.channel().close();

@@ -1,5 +1,7 @@
 package priv.common.handler;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.common.log.LogUtil;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -8,6 +10,7 @@ import io.netty.channel.ChannelPromise;
 import java.util.function.BiFunction;
 
 public class EventLoggerHandler extends ChannelDuplexHandler {
+    private static final Logger logger = LoggerFactory.getLogger(EventLoggerHandler.class);
     private final BiFunction<ChannelHandlerContext,Throwable,String> exceptionHandler;
     private final boolean logClose;
     private final String moduleName;
@@ -29,14 +32,14 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LogUtil.info(() -> "EventLoggerHandler#exceptionCaught:"+moduleName + " : " + exceptionHandler.apply(ctx, cause));
-        ctx.channel().close().addListener(LogUtil.LOG_IF_FAILED);
+        logger.info(moduleName + " : " + exceptionHandler.apply(ctx, cause));
+        ctx.channel().close();
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (logClose) {
-            LogUtil.info(() -> "EventLoggerHandler#close:"+moduleName + " : " + ctx.channel() + "call close.");
+            logger.info(moduleName + " : " + ctx.channel() + "call close.");
         }
 //         promise.addListener(LogUtil.LOG_IF_FAILED);
         super.close(ctx, promise);
@@ -44,7 +47,7 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        LogUtil.info(() -> "EventLoggerHandler#channelInactive:"+moduleName + " : " + ctx.channel() + "channel Inactive.");
+        logger.info(moduleName + " : " + ctx.channel() + "channel Inactive.");
         super.channelInactive(ctx);
     }
 }

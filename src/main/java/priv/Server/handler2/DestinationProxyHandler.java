@@ -4,6 +4,8 @@ package priv.Server.handler2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler.SimpleTransferHandler;
 import priv.common.log.LogUtil;
@@ -29,6 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
+	private static final Logger logger = LoggerFactory.getLogger(DestinationProxyHandler.class);
 
 	private Channel targetChannel;
 
@@ -74,10 +77,10 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private void handleConnect(ChannelHandlerContext ctx, ConnectMessage m) {
 		if (targetChannel == null || !targetChannel.isActive()) {
-			ctx.channel().close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
+			ctx.channel().close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE(logger));
 			m.release();
 		} else {
-			targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOGGER_ON_FAILED_CLOSE);
+			targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOGGER_ON_FAILED_CLOSE(logger));
 		}
 	}
 
@@ -94,7 +97,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 			address = new InetSocketAddress(InetAddress.getByName(host), port);
 		} catch (UnknownHostException e) {
 			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:" + host));
-			LogUtil.info(()->"unknown Host:"+host);
+			logger.error("unknown Host:"+host);
 			//note: 先不主动关闭连接 等超时handler触发了再关闭
 			return;
 		}
@@ -133,7 +136,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				callback = new Runnable() {
 					@Override
 					public void run() {
-						LogUtil.info(() -> channelToServer + " connect success");
+						logger.info(channelToServer + " connect success");
 						onTargetSuccess(ctx, channelToServer);
 						channelToServer.closeFuture().addListener((ChannelFutureListener) f->{
 							onTargetClose(ctx, f.channel());
@@ -144,7 +147,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				callback = new Runnable() {
 					@Override
 					public void run() {
-						LogUtil.info(() -> channelToServer + " connect failed");
+						logger.info( channelToServer + " connect failed");
 						onTargetFailed(ctx, channelToServer);
 					}
 				};
@@ -205,7 +208,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void onTargetFailed(ChannelHandlerContext ctx, Channel channelToServer) {
-		LogUtil.info(() -> channelToServer + " connect failed");
+		logger.info(channelToServer + " connect failed");
 		ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 	}
 	private void onTargetSuccess(ChannelHandlerContext ctx, Channel targetChannel){
@@ -216,7 +219,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 	private void onTargetClose(ChannelHandlerContext ctx, Channel targetChannel){
 		if (Objects.equals(targetChannel,this.targetChannel)){
-			LogUtil.info(()->"closeFuture triggered"+targetChannel);
+			logger.info("closeFuture triggered"+targetChannel);
 			removeOldConnection(false);
 			ctx.writeAndFlush(new CloseMessage());
 		}

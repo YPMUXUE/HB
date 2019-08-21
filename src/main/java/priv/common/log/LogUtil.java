@@ -1,7 +1,7 @@
 package priv.common.log;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import org.slf4j.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -11,54 +11,33 @@ import java.util.function.Supplier;
 
 public class LogUtil {
     private final static PrintStream logger;
-    private static final boolean DEBUG;
-    public static final ChannelFutureListener LOGGER_ON_FAILED_CLOSE=new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+
+    static {
+        logger = System.out;
+        System.setErr(logger);
+    }
+
+    public static  ChannelFutureListener LOG_IF_FAILED(Logger logger){
+        return future -> {
+            if (!future.isSuccess()){
+                logger.error("channel:"+ future.channel() +"result:"+stackTraceToString(future.cause()));
+            }
+        };
+    }
+
+    public static ChannelFutureListener LOGGER_ON_FAILED_CLOSE(Logger logger){
+        return future -> {
             if (future.isSuccess()){
 
             }else{
-                LogUtil.error(()->"channel:"+ future.channel() +"cause:"+stackTraceToString(future.cause()));
+                logger.error("channel:"+ future.channel() +"cause:"+stackTraceToString(future.cause()));
                 future.channel().close();
             }
-        }
-    };
-
-    public static final ChannelFutureListener LOG_IF_FAILED =new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()){
-                LogUtil.error(()->"channel:"+ future.channel() +"result:"+stackTraceToString(future.cause()));
-            }
-        }
-    };
-    static {
-//        File logFile=new File("/HB/log/logFile");
-//        PrintStream logStream;
-//        try {
-//            logFile.getParentFile().mkdirs();
-//            logFile.createNewFile();
-//            logStream = new PrintStream(logFile, "utf-8");
-//        }catch (Exception e){
-//            logStream=System.out;
-//            logStream.println("using system.out");
-//        }
-        {
-            logger = System.out;
-            System.setErr(logger);
-        }
+        };
     }
-
-    static {DEBUG=Boolean.valueOf(System.getProperty("debug","false"));}
-
     public static void info(Supplier<String> s){
         Objects.requireNonNull(s);
         logger.println("info:"+s.get());
-    }
-    public static void debug(Supplier<String> s){
-        if (DEBUG) {
-            logger.println("debug:" + Objects.requireNonNull(s).get());
-        }
     }
 
     public static void error(Supplier<String> s) {

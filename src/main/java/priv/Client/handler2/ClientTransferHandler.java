@@ -1,27 +1,29 @@
 package priv.Client.handler2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.common.handler.SimpleTransferHandler;
-import priv.common.log.LogUtil;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.close.CloseMessage;
 import priv.common.message.frame.connect.ConnectMessage;
 import priv.common.message.frame.establish.ConnectionEstablishFailedMessage;
 import priv.common.message.frame.establish.ConnectionEstablishMessage;
 import priv.common.resource.HttpResources;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 
 import java.nio.charset.Charset;
 
 public class ClientTransferHandler extends SimpleTransferHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ClientTransferHandler.class);
     public static final MessageProcessor HTTPS_PROCESSOR = (ctx, msg) -> {
         if (msg instanceof ConnectionEstablishMessage) {
             return Unpooled.buffer().writeBytes(HttpResources.HttpResponse.Connection_Established.getBytes(Charset.forName("utf-8")));
         } else if(msg instanceof ConnectionEstablishFailedMessage) {
-            LogUtil.info(()->((ConnectionEstablishFailedMessage) msg).getReason());
+            logger.info(((ConnectionEstablishFailedMessage) msg).getReason());
             return Unpooled.buffer().writeBytes(HttpResources.HttpResponse.Connection_Failed.getBytes(Charset.forName("utf-8")));
         }else if (msg instanceof ConnectMessage){
             return ((ConnectMessage) msg).getContent();

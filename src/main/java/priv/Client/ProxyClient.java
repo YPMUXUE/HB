@@ -32,19 +32,19 @@ public class ProxyClient {
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer);
         ChannelFuture future = bootstrap.bind(address);
+        this.serverChannel = future.channel();
         future.addListener(f->{
             if (f.isSuccess()){
-                logger.info("test slf4j");
-                LogUtil.info(()->"start success on" + address);
+                logger.info("start success on" + address);
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     serverChannel.close().syncUninterruptibly();
                 }));
             }else{
-                LogUtil.info(()->LogUtil.stackTraceToString(future.cause()));
+                logger.error(LogUtil.stackTraceToString(future.cause()));
+                serverChannel.close().syncUninterruptibly();
             }
         });
         future.syncUninterruptibly();
-        this.serverChannel = future.channel();
     }
 
     public static void main(String[] args) throws Exception {

@@ -1,21 +1,23 @@
 package priv.Server;
 
-import priv.Server.handler2.DestinationProxyHandler;
-import priv.common.handler.EventLoggerHandler;
-import priv.common.handler.ReadWriteTimeoutHandler;
-import priv.common.handler2.coder.AllMessageTransferHandler;
-import priv.common.log.LogUtil;
-import priv.common.resource.StaticConfig;
-import priv.common.util.HandlerHelper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import priv.Server.handler2.DestinationProxyHandler;
+import priv.common.handler.EventLoggerHandler;
+import priv.common.handler.ReadWriteTimeoutHandler;
+import priv.common.handler2.coder.AllMessageTransferHandler;
+import priv.common.resource.StaticConfig;
+import priv.common.util.HandlerHelper;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 public class ProxyServer {
+    private static final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
     static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
     protected Channel serverChannel;
@@ -28,7 +30,7 @@ public class ProxyServer {
         ChannelFuture future = bootstrap.bind(address);
         future.addListener(f -> {
             if (f.isSuccess()) {
-                LogUtil.info(() -> address.toString() + "bind success");
+                logger.info( address.toString() + "bind success");
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> serverChannel.close().syncUninterruptibly()));
             }
         });

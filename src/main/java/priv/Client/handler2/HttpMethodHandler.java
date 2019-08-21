@@ -1,5 +1,7 @@
 package priv.Client.handler2;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.SimpleTransferHandler;
@@ -24,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
+	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
 	public HttpMethodHandler() {
 	}
 
@@ -32,7 +35,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		try {
 			if (msg instanceof FullHttpRequest) {
 				FullHttpRequest m = (FullHttpRequest) msg;
-				LogUtil.debug(m::toString);
+				logger.debug(m.toString());
 
 				if (HttpMethod.CONNECT.equals(m.method())) {
 					handleConnect(ctx, m);
@@ -44,7 +47,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				}
 			}
 		} catch (Throwable e) {
-			LogUtil.info(() -> LogUtil.stackTraceToString(e));
+			logger.error(LogUtil.stackTraceToString(e));
 		} finally {
 			ReferenceCountUtil.release(msg);
 		}
@@ -94,7 +97,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 					executor.execute(task);
 				}
 			}else{
-				LogUtil.info(() -> (hostName + "connect failed"));
+				logger.info(hostName + "connect failed");
                 ctx.channel().close();
 			}
 		});
