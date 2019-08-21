@@ -1,6 +1,8 @@
 package priv.Client;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.log.LogUtil;
@@ -21,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ProxyClient {
     public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-
+    private static final Logger logger = LoggerFactory.getLogger(ProxyClient.class);
     protected Channel serverChannel;
 
     public ProxyClient(final SocketAddress address, ChannelInitializer channelInitializer) throws Exception {
@@ -32,6 +34,7 @@ public class ProxyClient {
         ChannelFuture future = bootstrap.bind(address);
         future.addListener(f->{
             if (f.isSuccess()){
+                logger.info("test slf4j");
                 LogUtil.info(()->"start success on" + address);
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     serverChannel.close().syncUninterruptibly();
