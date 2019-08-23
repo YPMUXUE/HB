@@ -9,6 +9,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 
 public class EchoServer {
     public static void main(String[] args) throws Exception {
@@ -22,6 +23,7 @@ public class EchoServer {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                System.out.println(new String(ByteBufUtil.getBytes(((ByteBuf)msg).retain()), StandardCharsets.UTF_8));
                                 System.out.println(ByteBufUtil.hexDump((ByteBuf) msg));
                                 super.channelRead(ctx,msg);
                             }

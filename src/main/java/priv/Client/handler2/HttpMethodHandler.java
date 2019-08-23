@@ -61,6 +61,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 	private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
 		final String hostName = msg.uri();
 		final HostAndPort destination = HostAndPort.resolve(msg);
+		logger.debug(destination.toString());
 		Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
 		ChannelInitializer channelInitializer = new ChannelInitializer() {
 			@Override

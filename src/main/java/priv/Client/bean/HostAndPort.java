@@ -158,11 +158,16 @@ public class HostAndPort {
         return this.host.hashCode()^this.port.hashCode();
     }
 
+    @Override
+    public String toString() {
+        return super.toString() + "[" + host + ":" + port + "]";
+    }
+
     public static void main(String[] args) {
 //        String url = "http://www.example.com:8080/test?t=1";
 //        String host = "http://www.example.com";
-        String url = "103.254.188.50:80";
-        String host = "103.254.188.50:80";
+        String url = "profile.firefox.com.cn:443";
+        String host = "profile.firefox.com.cn:443";
         HostAndPort resolve = resolveNew(url, host);
         System.out.println(resolve.host+"----"+resolve.port);
     }

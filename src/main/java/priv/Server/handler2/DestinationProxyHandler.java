@@ -4,10 +4,12 @@ package priv.Server.handler2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler.SimpleTransferHandler;
+import priv.common.handler2.InboundCallBackHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV1Message;
@@ -28,6 +30,8 @@ import java.net.UnknownHostException;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
@@ -117,13 +121,41 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void doConnect(ChannelHandlerContext ctx, SocketAddress address) throws Exception {
+		EventExecutor executor = ctx.executor();
+		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
+		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
+			@Override
+			public void accept(Channel channel, Object o) {
+				ctx.channel().writeAndFlush(o);
+			}
+		});
 
+		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
+			@Override
+			public void accept(Channel channel, Throwable throwable) {
+				logger.error(channel.toString(),throwable);
+				channel.close();
+			}
+		});
+
+		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
+			@Override
+			public void accept(Channel channel) {
+				executor.execute(new Runnable() {
+					@Override
+					public void run() {
+						onTargetClose(ctx,channel);
+					}
+				});
+			}
+		});
 		ChannelInitializer<Channel> initializerToNewConnection = new ChannelInitializer<Channel>() {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
 				ChannelPipeline pipeline = ch.pipeline();
 				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(StaticConfig.timeout));
-				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel(),false));
+//				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel(),false));
+				pipeline.addLast("InboundCallBackHandler", callBackHandler);
 			}
 		};
 
@@ -138,9 +170,9 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 					public void run() {
 						logger.info(channelToServer + " connect success");
 						onTargetSuccess(ctx, channelToServer);
-						channelToServer.closeFuture().addListener((ChannelFutureListener) f->{
-							onTargetClose(ctx, f.channel());
-						});
+//						channelToServer.closeFuture().addListener((ChannelFutureListener) f->{
+//							onTargetClose(ctx, f.channel());
+//						});
 					}
 				};
 			}else{
@@ -219,7 +251,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 	private void onTargetClose(ChannelHandlerContext ctx, Channel targetChannel){
 		if (Objects.equals(targetChannel,this.targetChannel)){
-			logger.info("closeFuture triggered"+targetChannel);
+			logger.info("target channel closed."+targetChannel.toString());
 			removeOldConnection(false);
 			ctx.writeAndFlush(new CloseMessage());
 		}

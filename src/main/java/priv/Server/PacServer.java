@@ -40,7 +40,7 @@ public class PacServer {
 
     private static class PacHandler extends ChannelDuplexHandler {
         private static final String DEFAULT_PAC = "function FindProxyForURL(url, host) {\n" +
-                "\treturn \"PROXY 127.0.0.1:9001\";\n" +
+                "\treturn \"PROXY 127.0.0.1:4449\";\n" +
                 "}";
         private byte[] pacDate;
 
