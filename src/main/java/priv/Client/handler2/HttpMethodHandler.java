@@ -1,10 +1,16 @@
 package priv.Client.handler2;
 
+import io.netty.channel.*;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
 import priv.common.handler.EventLoggerHandler;
-import priv.common.handler.SimpleTransferHandler;
+import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.frame.Message;
@@ -12,17 +18,13 @@ import priv.common.message.frame.bind.BindV2Message;
 import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
 import priv.common.util.HandlerHelper;
-import io.netty.channel.*;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
@@ -62,7 +64,31 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		final String hostName = msg.uri();
 		final HostAndPort destination = HostAndPort.resolve(msg);
 		logger.debug(destination.toString());
+		EventExecutor executor = ctx.executor();
 		Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
+		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
+			@Override
+			public void accept(Channel c, Object o) {
+				ctx.channel().writeAndFlush(o);
+			}
+		});
+
+		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
+			@Override
+			public void accept(Channel channel, Throwable throwable) {
+				logger.error(channel.toString(), throwable);
+				channel.close();
+			}
+		});
+
+		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
+			@Override
+			public void accept(Channel channel) {
+				ctx.channel().close();
+			}
+		});
+
 		ChannelInitializer channelInitializer = new ChannelInitializer() {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
@@ -71,15 +97,13 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				//消息转换
 				ch.pipeline().addLast("MessageTransferHandler", new AllMessageTransferHandler());
 				//inbound消息转发
-				ch.pipeline().addLast("SimpleTransferHandler", new SimpleTransferHandler(ctx.channel(), true));
+				ch.pipeline().addLast("InboundCallBackHandler", callBackHandler);
 				//log
 				ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler("ClientToProxyServer",true));
-
 			}
 		};
 		ChannelFuture future = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
 		Channel channel = future.channel();
-		EventExecutor executor = ctx.executor();
 		future.addListener((f)->{
 			if (f.isSuccess()){
 				Runnable task = ()->{
