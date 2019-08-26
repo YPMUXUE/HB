@@ -7,6 +7,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler.SimpleTransferHandler;
 import priv.common.handler2.InboundCallBackHandler;
@@ -81,10 +82,10 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private void handleConnect(ChannelHandlerContext ctx, ConnectMessage m) {
 		if (targetChannel == null || !targetChannel.isActive()) {
-			ctx.channel().close().addListener(LogUtil.LOGGER_ON_FAILED_CLOSE(logger));
 			m.release();
+			ctx.channel().close().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		} else {
-			targetChannel.writeAndFlush(m.getContent()).addListener(LogUtil.LOGGER_ON_FAILED_CLOSE(logger));
+			targetChannel.writeAndFlush(m.getContent()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		}
 	}
 
@@ -156,6 +157,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(StaticConfig.timeout));
 //				pipeline.addLast("ConnectionToServer*transfer", new SimpleTransferHandler(ctx.channel(),false));
 				pipeline.addLast("InboundCallBackHandler", callBackHandler);
+				pipeline.addLast("EventLoggerHandler", new EventLoggerHandler("ProxyChannel",true));
 			}
 		};
 
@@ -224,6 +226,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				targetChannel.close();
 			});
 		}
+		targetChannel = null;
 		super.close(ctx, promise);
 	}
 
@@ -253,7 +256,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		if (Objects.equals(targetChannel,this.targetChannel)){
 			logger.info("target channel closed."+targetChannel.toString());
 			removeOldConnection(false);
-			ctx.writeAndFlush(new CloseMessage());
+			ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		}
 	}
 

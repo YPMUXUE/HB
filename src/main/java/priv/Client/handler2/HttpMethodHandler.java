@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
 import priv.common.handler.EventLoggerHandler;
+import priv.common.handler2.ConnectProxyHandler;
 import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
 import priv.common.log.LogUtil;
@@ -64,28 +65,29 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		final String hostName = msg.uri();
 		final HostAndPort destination = HostAndPort.resolve(msg);
 		logger.debug(destination.toString());
-		EventExecutor executor = ctx.executor();
-		Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+		EventExecutor clientExecutor = ctx.executor();
+		final Channel clientChannel = ctx.channel();
+		Message bindMessage = new BindV2Message(destination.getHostString(), destination.getPort());
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
 		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
 			@Override
 			public void accept(Channel c, Object o) {
-				ctx.channel().writeAndFlush(o);
+				clientChannel.writeAndFlush(o);
 			}
 		});
 
 		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
 			@Override
-			public void accept(Channel channel, Throwable throwable) {
-				logger.error(channel.toString(), throwable);
-				channel.close();
+			public void accept(Channel targetChannel, Throwable throwable) {
+				logger.error(targetChannel.toString(), throwable);
+				targetChannel.close();
 			}
 		});
 
 		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
 			@Override
 			public void accept(Channel channel) {
-				ctx.channel().close();
+				clientChannel.close();
 			}
 		});
 
@@ -99,31 +101,30 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				//inbound消息转发
 				ch.pipeline().addLast("InboundCallBackHandler", callBackHandler);
 				//log
-				ch.pipeline().addLast("EventLoggerHandler",new EventLoggerHandler("ClientToProxyServer",true));
+				ch.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("ClientToProxyServer", true));
 			}
 		};
-		ChannelFuture future = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
-		Channel channel = future.channel();
-		future.addListener((f)->{
-			if (f.isSuccess()){
-				Runnable task = ()->{
-					//删除当前连接RequestToClient下ChannelHandler
-					ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
-					ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
-					ctx.pipeline().addLast("ClientTransferHandler", new ClientTransferHandler(channel, false));
-					ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
 
 
-					channel.writeAndFlush(bindMessage);
-				};
-				if (executor.inEventLoop()){
-					task.run();
-				}else{
-					executor.execute(task);
-				}
-			}else{
+		ChannelFuture connectPromise = Connections.connect(clientChannel.eventLoop(), getProxyAddress(), channelInitializer);
+		connectPromise.addListener((ChannelFutureListener) (f) -> {
+			Channel channel = f.channel();
+			if (f.isSuccess()) {
+				clientExecutor.execute(new Runnable() {
+					@Override
+					public void run() {
+						//删除当前连接RequestToClient下ChannelHandler
+						ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
+						ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+						ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler(channel));
+						ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
+
+						channel.writeAndFlush(bindMessage);
+					}
+				});
+			} else {
 				logger.info(hostName + "connect failed");
-                ctx.channel().close();
+				clientChannel.close();
 			}
 		});
 	}
