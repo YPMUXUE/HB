@@ -5,13 +5,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import org.apache.commons.codec.language.bm.PhoneticEngine;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
-import priv.common.handler.SimpleTransferHandler;
 import priv.common.handler2.InboundCallBackHandler;
-import priv.common.log.LogUtil;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV1Message;
 import priv.common.message.frame.bind.BindV2Message;
@@ -28,9 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -44,7 +42,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private final boolean closeTargetChannel;
 
-	private final BlockingQueue<PendingWriteItem> pendingData = new LinkedBlockingQueue<>();
+	private Queue<PendingWriteItem> pendingData;
 //    private static final String Proxy_Transfer_Name="DestinationProxyHandler*Transfer";
 
 	static {
@@ -190,23 +188,6 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		});
 
 	}
-
-	private boolean prepareConnect() {
-		removeOldConnection(true);
-		return true;
-	}
-
-	private void removeOldConnection(boolean closeTargetChannel){
-		if (this.targetChannel != null && closeTargetChannel) {
-			this.targetChannel.eventLoop().submit(() -> {
-				if (targetChannel.isActive())
-					targetChannel.close();
-			});
-			this.targetChannel = null;
-		}
-		this.writeable = false;
-	}
-
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 		if (msg instanceof ByteBuf) {
@@ -231,8 +212,9 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void writePendingData(ChannelHandlerContext ctx){
-		if (pendingData.size() > 0) {
-			for (int i = pendingData.size() - 1; i >= 0; i--) {
+		Queue<PendingWriteItem> pendingData = this.pendingData;
+		if (CollectionUtils.isNotEmpty(pendingData)) {
+			while (!pendingData.isEmpty()){
 				PendingWriteItem item = pendingData.poll();
 				if (item != null) {
 					ctx.write(item.data, item.promise);
@@ -242,20 +224,39 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	private boolean prepareConnect() {
+		removeTargetChannel(true);
+		this.pendingData = new LinkedList<>();
+		return true;
+	}
+
+	private void removeTargetChannel(boolean closeTargetChannel){
+		if (this.targetChannel != null && closeTargetChannel) {
+			this.targetChannel.eventLoop().submit(() -> {
+				if (targetChannel.isActive())
+					targetChannel.close();
+			});
+		}
+		this.targetChannel = null;
+		this.writeable = false;
+	}
+
 	private void onTargetFailed(ChannelHandlerContext ctx, Channel channelToServer) {
 		logger.info(channelToServer + " connect failed");
 		ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+		removeTargetChannel(false);
 	}
 	private void onTargetSuccess(ChannelHandlerContext ctx, Channel targetChannel){
 		this.targetChannel = targetChannel;
-		this.writeable = true;
 		ctx.writeAndFlush(new ConnectionEstablishMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		writePendingData(ctx);
+		this.writeable = true;
+		this.pendingData = null;
 	}
 	private void onTargetClose(ChannelHandlerContext ctx, Channel targetChannel){
 		if (Objects.equals(targetChannel,this.targetChannel)){
 			logger.info("target channel closed."+targetChannel.toString());
-			removeOldConnection(false);
+			removeTargetChannel(false);
 			ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		}
 	}

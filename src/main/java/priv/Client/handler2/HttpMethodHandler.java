@@ -9,6 +9,8 @@ import io.netty.util.concurrent.EventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
+import priv.common.events.ConnectFailedProxyEvent;
+import priv.common.events.ConnectSuccessProxyEvent;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler2.ConnectProxyHandler;
 import priv.common.handler2.InboundCallBackHandler;
@@ -106,26 +108,39 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		};
 
 
+
+		//删除当前连接RequestToClient下ChannelHandler
+		ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
+		ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+		ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler());
+		ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
+
+
 		ChannelFuture connectPromise = Connections.connect(clientChannel.eventLoop(), getProxyAddress(), channelInitializer);
 		connectPromise.addListener((ChannelFutureListener) (f) -> {
-			Channel channel = f.channel();
-			if (f.isSuccess()) {
-				clientExecutor.execute(new Runnable() {
-					@Override
-					public void run() {
-						//删除当前连接RequestToClient下ChannelHandler
-						ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
-						ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
-						ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler(channel));
-						ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
-
-						channel.writeAndFlush(bindMessage);
-					}
-				});
-			} else {
-				logger.info(hostName + "connect failed");
-				clientChannel.close();
+			if (f.isSuccess()){
+				clientChannel.pipeline().fireUserEventTriggered(new ConnectSuccessProxyEvent(f.channel()));
+			}else{
+				clientChannel.pipeline().fireUserEventTriggered(new ConnectFailedProxyEvent(f.cause()));
 			}
+//			Channel channel = f.channel();
+//			if (f.isSuccess()) {
+//				clientExecutor.execute(new Runnable() {
+//					@Override
+//					public void run() {
+//						//删除当前连接RequestToClient下ChannelHandler
+//						ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
+//						ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+//						ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler(channel));
+//						ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
+//
+//						channel.writeAndFlush(bindMessage);
+//					}
+//				});
+//			} else {
+//				logger.info(hostName + "connect failed");
+//				clientChannel.close();
+//			}
 		});
 	}
 

@@ -12,10 +12,13 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
  *  
  */
 public class ConnectProxyHandler extends ChannelInboundHandlerAdapter {
-	private final Channel targetChannel;
+	private Channel targetChannel;
 
 	public ConnectProxyHandler(Channel targetChannel) {
 		this.targetChannel = targetChannel;
+	}
+
+	public ConnectProxyHandler() {
 	}
 
 	@Override
