@@ -4,7 +4,6 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -26,12 +25,12 @@ import priv.common.util.HandlerHelper;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
-	private HostAndPort proxyDestination;
 	private Channel proxyChannel;
 	private static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
 
@@ -41,17 +40,22 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
 
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-		if (proxyChannel != null) {
-			//原有连接
-
-		}
 		try {
 			if (msg instanceof FullHttpRequest) {
 				FullHttpRequest m = (FullHttpRequest) msg;
 				final HostAndPort destination = HostAndPort.resolve(m);
+				if (this.proxyChannel != null) {
+					//原有连接
+					HostAndPort hostAndPort = this.proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).get();
+					if (!Objects.equals(destination,hostAndPort)){
+						Channel tmpChannel = this.proxyChannel;
+						this.proxyChannel = null;
+						tmpChannel.close();
+					}
+				}
+
 				logger.debug(destination.toString());
 				logger.debug(m.toString());
-
 				if (HttpMethod.CONNECT.equals(m.method())) {
 					handleConnect(ctx, m, destination);
 				} else {
