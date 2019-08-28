@@ -4,6 +4,8 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
+	private HostAndPort proxyDestination;
+	private Channel proxyChannel;
+	private static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
 
 	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
 	public HttpMethodHandler() {
@@ -36,18 +41,21 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
 
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		if (proxyChannel != null) {
+			//原有连接
+
+		}
 		try {
 			if (msg instanceof FullHttpRequest) {
 				FullHttpRequest m = (FullHttpRequest) msg;
+				final HostAndPort destination = HostAndPort.resolve(m);
+				logger.debug(destination.toString());
 				logger.debug(m.toString());
 
 				if (HttpMethod.CONNECT.equals(m.method())) {
-					handleConnect(ctx, m);
+					handleConnect(ctx, m, destination);
 				} else {
-					//TODO
-//                handleSimpleProxy(ctx, m);
-					ctx.channel().close();
-					return;
+					handleSimpleProxy(ctx, m, destination);
 				}
 			}
 		} catch (Throwable e) {
@@ -58,14 +66,11 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
 	}
 
-	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg) {
+	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) {
 		throw new UnsupportedOperationException("普通HTTP代理请求还没完成，先放着");
 	}
 
-	private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
-		final String hostName = msg.uri();
-		final HostAndPort destination = HostAndPort.resolve(msg);
-		logger.debug(destination.toString());
+	private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		final Channel clientChannel = ctx.channel();
 		Message bindMessage = new BindV2Message(destination.getHostString(), destination.getPort());
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
@@ -96,6 +101,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 			public void accept(Channel channel) {
 				clientChannel.pipeline().fireUserEventTriggered(new ConnectSuccessProxyEvent(channel));
 				channel.writeAndFlush(bindMessage);
+				clientChannel.closeFuture().addListener(f -> channel.eventLoop().execute(()->{channel.close();}));
 			}
 		});
 
