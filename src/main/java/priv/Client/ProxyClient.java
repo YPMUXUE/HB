@@ -4,6 +4,7 @@ package priv.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
+import priv.Client.handler2.SimpleHttpProxyHandler;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.log.LogUtil;
 import priv.common.resource.StaticConfig;
@@ -56,6 +57,7 @@ public class ProxyClient {
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
                 pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+                pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
                 pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
                 pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient",true));
             }

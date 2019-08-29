@@ -32,8 +32,6 @@ import java.util.function.Consumer;
 
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 	private Channel proxyChannel;
-	private static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
-
 	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
 	public HttpMethodHandler() {
 	}
@@ -46,11 +44,11 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				final HostAndPort destination = HostAndPort.resolve(m);
 				if (this.proxyChannel != null) {
 					//原有连接
-					HostAndPort hostAndPort = this.proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).get();
+					HostAndPort hostAndPort = this.proxyChannel.attr(ConfigAttributeKey.HOST_AND_PORT_ATTRIBUTE_KEY).get();
 					if (!Objects.equals(destination,hostAndPort)){
-						Channel tmpChannel = this.proxyChannel;
+						Channel thisChannel = this.proxyChannel;
 						this.proxyChannel = null;
-						tmpChannel.close();
+						thisChannel.close();
 					}
 				}
 

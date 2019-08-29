@@ -231,14 +231,15 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void removeTargetChannel(boolean closeTargetChannel){
-		if (this.targetChannel != null && closeTargetChannel) {
-			this.targetChannel.eventLoop().submit(() -> {
-				if (targetChannel.isActive())
-					targetChannel.close();
-			});
-		}
+		Channel tmpChannel = this.targetChannel;
 		this.targetChannel = null;
 		this.writeable = false;
+		if (tmpChannel != null && closeTargetChannel) {
+			tmpChannel.eventLoop().submit(() -> {
+				if (tmpChannel.isActive())
+					tmpChannel.close();
+			});
+		}
 	}
 
 	private void onTargetFailed(ChannelHandlerContext ctx, Channel channelToServer) {
