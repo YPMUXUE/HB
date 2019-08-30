@@ -7,7 +7,7 @@ import priv.common.resource.ConnectionEvents;
 public class ConnectionEstablishFailedMessage implements Message {
 
 	public static final ConnectionEvents operationCode = ConnectionEvents.CONNECTION_ESTABLISH_FAILED;
-	private String reason;
+	private String reason = "";
 
 	public ConnectionEstablishFailedMessage() {
 	}

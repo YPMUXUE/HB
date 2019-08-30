@@ -1,6 +1,7 @@
 package priv.Client;
 
 
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
@@ -55,6 +56,7 @@ public class ProxyClient {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
+                pipeline.addLast(new HttpResponseEncoder());
                 pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
                 pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
                 pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());

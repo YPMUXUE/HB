@@ -120,6 +120,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void doConnect(ChannelHandlerContext ctx, SocketAddress address) throws Exception {
+		final String socketString = address.toString();
 		EventExecutor executor = ctx.executor();
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
 		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
@@ -179,7 +180,7 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 				callback = new Runnable() {
 					@Override
 					public void run() {
-						logger.info( channelToServer + " connect failed");
+						logger.info( socketString + " connect failed");
 						onTargetFailed(ctx, channelToServer);
 					}
 				};
@@ -200,15 +201,25 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		}
 	}
 
+//	@Override
+//	public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+//		if (closeTargetChannel && targetChannel != null && targetChannel.isActive()) {
+//			targetChannel.eventLoop().submit(() -> {
+//				targetChannel.close();
+//			});
+//		}
+//		targetChannel = null;
+//		super.close(ctx, promise);
+//	}
+
+
 	@Override
-	public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		if (closeTargetChannel && targetChannel != null && targetChannel.isActive()) {
-			targetChannel.eventLoop().submit(() -> {
-				targetChannel.close();
-			});
+			removeTargetChannel(closeTargetChannel);
 		}
 		targetChannel = null;
-		super.close(ctx, promise);
+		super.channelInactive(ctx);
 	}
 
 	private void writePendingData(ChannelHandlerContext ctx){
@@ -243,7 +254,6 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void onTargetFailed(ChannelHandlerContext ctx, Channel channelToServer) {
-		logger.info(channelToServer + " connect failed");
 		ctx.writeAndFlush(new ConnectionEstablishFailedMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		removeTargetChannel(false);
 	}

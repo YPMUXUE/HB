@@ -1,23 +1,16 @@
 package priv.Client.handler2;
 
 import io.netty.channel.*;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.util.concurrent.SucceededFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
-import priv.common.events.ConnectFailedProxyEvent;
-import priv.common.events.ConnectSuccessProxyEvent;
-import priv.common.handler.EventLoggerHandler;
-import priv.common.handler2.ConnectProxyHandler;
-import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
 import priv.common.log.LogUtil;
-import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV2Message;
+import priv.common.message.frame.connect.ConnectMessage;
 import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
 import priv.common.util.HandlerHelper;
@@ -25,10 +18,6 @@ import priv.common.util.HandlerHelper;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  *  * @author  pyuan
@@ -78,15 +67,45 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 	}
 
 	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
+		ChannelFuture channelFuture;
 		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
 			ChannelInitializer channelInitializer = new ChannelInitializer() {
 				@Override
 				protected void initChannel(Channel ch) throws Exception {
-
+					ChannelPipeline pipeline = ch.pipeline();
+					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
+					pipeline.addLast(new AllMessageTransferHandler());
+					pipeline.addLast(new HttpProxyMessageHandler());
+					pipeline.addLast(new HttpResponseDecoder());
+					pipeline.addLast(new HttpObjectAggregator(Integer.MAX_VALUE));
+					pipeline.addLast(new HttpRequestEncoder());
+					pipeline.addLast(new ChannelInboundHandlerAdapter(){
+						@Override
+						public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+							ctx.channel().writeAndFlush(msg);
+						}
+					});
 				}
 			};
-			ChannelFuture channelFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
+			channelFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
+
+			this.proxyChannel = channelFuture.channel();
+			proxyChannel.attr(ConfigAttributeKey.HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
+		}else{
+			channelFuture = proxyChannel.newSucceededFuture();
 		}
+		BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+//		msg.headers().remove()
+		channelFuture.addListener(new ChannelFutureListener() {
+			@Override
+			public void operationComplete(ChannelFuture future) throws Exception {
+				Channel channel = future.channel();
+				if (future.isSuccess()){
+					channel.writeAndFlush(bindMessage);
+					channel.writeAndFlush(msg);
+				}
+			}
+		});
 
 	}
 
