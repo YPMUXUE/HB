@@ -268,7 +268,9 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		if (Objects.equals(targetChannel,this.targetChannel)){
 			logger.info("target channel closed."+targetChannel.toString());
 			removeTargetChannel(false);
-			ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+			if(ctx.channel().isActive()) {
+				ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+			}
 		}
 	}
 
