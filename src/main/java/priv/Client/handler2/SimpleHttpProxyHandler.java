@@ -68,6 +68,7 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 
 	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		ChannelFuture channelFuture;
+		Channel thisChannel = ctx.channel();
 		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
 			ChannelInitializer channelInitializer = new ChannelInitializer() {
 				@Override
@@ -82,7 +83,7 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 					pipeline.addLast(new ChannelInboundHandlerAdapter(){
 						@Override
 						public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-							ctx.channel().writeAndFlush(msg);
+							thisChannel.writeAndFlush(msg);
 						}
 					});
 				}

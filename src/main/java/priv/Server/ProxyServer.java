@@ -6,7 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import priv.Server.handler2.DestinationProxyHandler;
+import priv.Server.handler2.MessageServerHandler;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
@@ -48,7 +48,7 @@ public class ProxyServer {
                 pipeline.addLast("LengthFieldBasedFrameDecoder", HandlerHelper.newDefaultFrameDecoderInstance())
                         .addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(120))
                         .addLast("AllMessageTransferHandler", new AllMessageTransferHandler())
-                        .addLast("DestinationProxyHandler", new DestinationProxyHandler())
+                        .addLast("DestinationProxyHandler", new MessageServerHandler())
                         .addLast("EventLoggerHandler", new EventLoggerHandler("ProxyServer", true));
             }
         });
