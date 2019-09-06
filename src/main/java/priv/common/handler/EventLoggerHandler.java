@@ -32,7 +32,8 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.info(moduleName + " : " + exceptionHandler.apply(ctx, cause));
+        logger.error(moduleName + " : " + exceptionHandler.apply(ctx, cause));
+        logger.info(moduleName+ " current stack trace:",new Exception("stack trace"));
         ctx.channel().close();
     }
 

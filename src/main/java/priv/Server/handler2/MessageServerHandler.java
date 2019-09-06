@@ -46,7 +46,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 	public MessageServerHandler() {
 		this.closeTargetChannel = true;
-		this.targetChannelFuture = null;
 	}
 
 	@Override
@@ -71,6 +70,52 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	@Override
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+		if (msg instanceof DataChannelPair) {
+			Channel channel = ((DataChannelPair) msg).channel;
+			Object data = ((DataChannelPair) msg).data;
+			if (this.targetChannelFuture != null && Objects.equals(this.targetChannelFuture.channel(), channel)) {
+				if (data instanceof ByteBuf) {
+					msg = new ConnectMessage((ByteBuf) data);
+				} else {
+					logger.error("data is not a instance of byteBuf:" + data.toString());
+					ReferenceCountUtil.release(data);
+					return;
+				}
+			}
+		}
+		super.write(ctx, msg, promise);
+	}
+
+	@Override
+	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		ChannelFuture f = this.targetChannelFuture;
+		if (f == null) {
+			super.channelInactive(ctx);
+		} else {
+			removeTargetChannel(closeTargetChannel);
+			this.targetChannelFuture = null;
+			super.channelInactive(ctx);
+		}
+	}
+
+	@Override
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+		if (evt instanceof ProxyEvent) {
+			ProxyEvent event = (ProxyEvent) evt;
+			if (event.type == ProxyEvent.BIND_SUCCESS) {
+				onBindSuccess(ctx, event.channelFuture.channel());
+			} else if (event.type == ProxyEvent.BIND_FAILED) {
+				onBindFailed(ctx, event.channelFuture.channel());
+			} else if (event.type == ProxyEvent.TARGET_INACTIVE) {
+				onTargetClose(ctx, event.channelFuture.channel());
+			} else {
+				throw new UnsupportedOperationException("wrong type of ProxyEvent:" + event.type);
+			}
+		}
+		super.userEventTriggered(ctx, evt);
+	}
 
 	private void handleConnect(ChannelHandlerContext ctx, ConnectMessage m) {
 		if (this.targetChannelFuture == null) {
@@ -79,8 +124,15 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			return;
 		}
 
+		ByteBuf content = m.getContent();
 		if (!this.targetChannelFuture.isDone()) {
-			ReferenceCountUtil.release(m);
+			this.targetChannelFuture.addListener((ChannelFutureListener) f -> {
+				if (f.isSuccess()){
+					f.channel().writeAndFlush(content);
+				}else{
+					ReferenceCountUtil.release(content);
+				}
+			});
 			return;
 		}
 
@@ -89,7 +141,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			ReferenceCountUtil.release(m);
 			ctx.channel().close().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		} else {
-			targetChannel.writeAndFlush(m.getContent()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+			targetChannel.writeAndFlush(content).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		}
 
 	}
@@ -182,55 +234,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		});
 	}
 
-	@Override
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-		if (msg instanceof DataChannelPair) {
-			Channel channel = ((DataChannelPair) msg).channel;
-			Object data = ((DataChannelPair) msg).data;
-			if (this.targetChannelFuture != null && Objects.equals(this.targetChannelFuture.channel(), channel)) {
-				if (data instanceof ByteBuf) {
-					msg = new ConnectMessage((ByteBuf) data);
-				} else {
-					logger.error("data is not a instance of byteBuf:" + data.toString());
-					ReferenceCountUtil.release(data);
-					return;
-				}
-			}
-		}
-		super.write(ctx, msg, promise);
-	}
-
-
-	@Override
-	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		ChannelFuture f = this.targetChannelFuture;
-		if (f == null) {
-			super.channelInactive(ctx);
-		} else {
-			removeTargetChannel(closeTargetChannel);
-			this.targetChannelFuture = null;
-			super.channelInactive(ctx);
-		}
-	}
-
-	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-		if (evt instanceof ProxyEvent) {
-			ProxyEvent event = (ProxyEvent) evt;
-			if (event.type == ProxyEvent.BIND_SUCCESS) {
-				onBindSuccess(ctx, event.channelFuture.channel());
-			} else if (event.type == ProxyEvent.BIND_FAILED) {
-				onBindFailed(ctx, event.channelFuture.channel());
-			} else if (event.type == ProxyEvent.TARGET_INACTIVE) {
-				onTargetClose(ctx, event.channelFuture.channel());
-			} else {
-				throw new UnsupportedOperationException("wrong type of ProxyEvent:" + event.type);
-			}
-		}
-		super.userEventTriggered(ctx, evt);
-	}
-
-
 	private boolean prepareConnect() {
 		if (this.targetChannelFuture != null && !targetChannelFuture.isDone()) {
 			return false;
@@ -246,20 +249,22 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		if (targetFuture == null) {
 			return;
 		}
-		if (closeTargetChannel && !targetFuture.isDone()) {
-			targetFuture.addListener((ChannelFutureListener) (f) -> {
-				if (f.isSuccess()) {
-					f.channel().close();
-				}
-			});
-		} else {
-			Channel targetChannel = targetFuture.channel();
-			if (targetChannel != null && closeTargetChannel) {
-				targetChannel.eventLoop().submit(() -> {
-					if (targetChannel.isActive()) {
-						targetChannel.close();
+		if (closeTargetChannel) {
+			if (!targetFuture.isDone()) {
+				targetFuture.addListener((ChannelFutureListener) (f) -> {
+					if (f.isSuccess()) {
+						f.channel().close();
 					}
 				});
+			} else {
+				Channel targetChannel = targetFuture.channel();
+				if (targetChannel != null) {
+					targetChannel.eventLoop().submit(() -> {
+						if (targetChannel.isActive()) {
+							targetChannel.close();
+						}
+					});
+				}
 			}
 		}
 	}
@@ -292,7 +297,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		if (this.targetChannelFuture == null) {
 			return;
 		}
-		if (!Objects.equals(targetChannel, this.targetChannelFuture.channel())) {
+		if (this.targetChannelFuture.channel().equals(targetChannel)) {
 			return;
 		}
 
@@ -305,7 +310,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		private final Object data;
 		private final Channel channel;
 
-		public DataChannelPair(Channel channel, Object object) {
+		DataChannelPair(Channel channel, Object object) {
 			this.data = object;
 			this.channel = channel;
 		}

@@ -56,8 +56,6 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				logger.debug(m.toString());
 				if (HttpMethod.CONNECT.equals(m.method())) {
 					handleConnect(ctx, m, destination);
-				} else {
-					handleSimpleProxy(ctx, m, destination);
 				}
 			}
 		} catch (Throwable e) {
