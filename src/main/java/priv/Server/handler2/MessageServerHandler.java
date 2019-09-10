@@ -297,7 +297,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		if (this.targetChannelFuture == null) {
 			return;
 		}
-		if (this.targetChannelFuture.channel().equals(targetChannel)) {
+		if (!Objects.equals(this.targetChannelFuture.channel(), targetChannel)) {
 			return;
 		}
 
