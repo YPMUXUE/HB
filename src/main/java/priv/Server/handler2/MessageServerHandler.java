@@ -301,7 +301,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			return;
 		}
 
-		logger.info("target channel closed." + targetChannel.toString());
+		logger.info("target channel inactive." + targetChannel.toString());
 		removeTargetChannel(false);
 		ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 	}

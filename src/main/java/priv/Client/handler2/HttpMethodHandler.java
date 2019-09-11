@@ -42,15 +42,6 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 			if (msg instanceof FullHttpRequest) {
 				FullHttpRequest m = (FullHttpRequest) msg;
 				final HostAndPort destination = HostAndPort.resolve(m);
-				if (this.proxyChannel != null) {
-					//原有连接
-					HostAndPort hostAndPort = this.proxyChannel.attr(ConfigAttributeKey.HOST_AND_PORT_ATTRIBUTE_KEY).get();
-					if (!Objects.equals(destination,hostAndPort)){
-						Channel thisChannel = this.proxyChannel;
-						this.proxyChannel = null;
-						thisChannel.close();
-					}
-				}
 
 				logger.debug(destination.toString());
 				logger.debug(m.toString());
@@ -64,10 +55,6 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 			ReferenceCountUtil.release(msg);
 		}
 
-	}
-
-	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) {
-		throw new UnsupportedOperationException("普通HTTP代理请求还没完成，先放着");
 	}
 
 	private void handleConnect(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {

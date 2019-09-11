@@ -54,7 +54,6 @@ public class ConnectProxyHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-//		targetChannel.writeAndFlush(msg);
 		if (msg instanceof ByteBuf) {
 			Message m = new ConnectMessage((ByteBuf) msg);
 			targetChannel.writeAndFlush(m);

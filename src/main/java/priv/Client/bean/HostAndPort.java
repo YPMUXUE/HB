@@ -11,10 +11,10 @@ public class HostAndPort {
     private String port;
     private String protocol;
     public static HostAndPort resolve(FullHttpRequest req){
-        return resolveNew(req.uri(),req.headers().get("Host"));
+        return resolve(req.uri(),req.headers().get("Host"));
     }
 
-    public static HostAndPort resolveNew(String uri, String hostHeader) {
+    public static HostAndPort resolve(String uri, String hostHeader) {
         HostAndPort result = new HostAndPort();
 
         ///////////////uri
@@ -70,60 +70,6 @@ public class HostAndPort {
         return result;
     }
 
-//    private static void resolve(String str , HostAndPort hostAndPort){
-//        int i;
-//        // http://www.example.com:8080/x?x=1
-//        if ((i = str.indexOf("://")) >= 0) {
-//            String protocol = str.substring(0, i);
-//            hostAndPort.port = Protocol.valueOf(protocol).getPort();
-//            str = str.substring(i + 3);
-//        }
-//        // www.example.com:8080/x?x=1
-//        if (str.startsWith("/")){
-//            str = str.substring(1);
-//        }
-//        // www.example.com:8080/x?x=1
-//        if ((i = str.indexOf("/"))>0){
-//            str = str.substring(0,i);
-//        }
-//        // www.example.com:8080
-//        if ((i = str.indexOf(":"))>0) {
-//            hostAndPort.port = str.substring(i + 1);
-//            str = str.substring(0, i);
-//        }
-//        // www.example.com
-//        hostAndPort.host = str;
-//
-//
-//    }
-
-    public static HostAndPort resolve(String uri, String host) {
-        HostAndPort result=new HostAndPort();
-        if (!uri.startsWith("/")) {
-            String protocol = uri.substring(0, uri.indexOf("://"));
-            String hostAndPort = uri.substring(uri.indexOf("://") + 3);
-            if (hostAndPort.contains("/")) {
-                hostAndPort = hostAndPort.substring(0, hostAndPort.indexOf("/"));
-            }
-            if (hostAndPort.contains(":")) {
-                result.port = hostAndPort.substring(hostAndPort.indexOf(":") + 1);
-                result.host = hostAndPort.substring(0, hostAndPort.indexOf(":"));
-            } else {
-                result.port = Protocol.valueOf(protocol).getPort();
-                result.host = hostAndPort;
-            }
-        }else{
-            if (host.contains(":")) {
-                result.port = host.substring(host.indexOf(":") + 1);
-                result.host = host.substring(0, host.indexOf(":"));
-            } else {
-                result.port = "80";
-                result.host = host;
-            }
-        }
-        return result;
-    }
-
     private HostAndPort(){}
 
     public HostAndPort(String host, String port) {
@@ -168,7 +114,7 @@ public class HostAndPort {
 //        String host = "http://www.example.com";
         String url = "profile.firefox.com.cn:443";
         String host = "profile.firefox.com.cn:443";
-        HostAndPort resolve = resolveNew(url, host);
+        HostAndPort resolve = resolve(url, host);
         System.out.println(resolve.host+"----"+resolve.port);
     }
 }

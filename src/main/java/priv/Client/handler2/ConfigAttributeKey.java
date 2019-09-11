@@ -11,6 +11,6 @@ import priv.Client.bean.HostAndPort;
  *  
  */
 public class ConfigAttributeKey {
-	public static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
+
 
 }
