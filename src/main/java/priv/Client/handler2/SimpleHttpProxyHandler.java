@@ -71,16 +71,16 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 		Channel thisChannel = ctx.channel();
 		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
 			InboundCallBackHandler callBack = new InboundCallBackHandler();
-			callBack.setChannelReadListener(new BiConsumer<Channel, Object>() {
+			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 				@Override
-				public void accept(Channel channel, Object o) {
+				public void accept(ChannelHandlerContext c, Object o) {
 					thisChannel.writeAndFlush(o);
 				}
 			});
 
-			callBack.setChannelInactiveListener(new Consumer<Channel>() {
+			callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 				@Override
-				public void accept(Channel channel) {
+				public void accept(ChannelHandlerContext c) {
 					thisChannel.close();
 				}
 			});

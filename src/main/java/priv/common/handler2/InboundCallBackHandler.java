@@ -17,15 +17,15 @@ import java.util.function.Consumer;
  *  
  */
 public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
-	private Consumer<Channel> channelRegisteredListener;
-	private Consumer<Channel> channelUnregisteredListener;
-	private Consumer<Channel> channelActiveListener;
-	private Consumer<Channel> channelInactiveListener;
-	private BiConsumer<Channel,Object> channelReadListener;
-	private Consumer<Channel>  channelReadCompleteListener;
-	private BiConsumer<Channel,Object> userEventTriggeredListener;
-	private Consumer<Channel> channelWritabilityChangedListener;
-	private BiConsumer<Channel,Throwable> exceptionCaughtListener;
+	private Consumer<ChannelHandlerContext> channelRegisteredListener;
+	private Consumer<ChannelHandlerContext> channelUnregisteredListener;
+	private Consumer<ChannelHandlerContext> channelActiveListener;
+	private Consumer<ChannelHandlerContext> channelInactiveListener;
+	private BiConsumer<ChannelHandlerContext,Object> channelReadListener;
+	private Consumer<ChannelHandlerContext>  channelReadCompleteListener;
+	private BiConsumer<ChannelHandlerContext,Object> userEventTriggeredListener;
+	private Consumer<ChannelHandlerContext> channelWritabilityChangedListener;
+	private BiConsumer<ChannelHandlerContext,Throwable> exceptionCaughtListener;
 
 	public InboundCallBackHandler() {
 		super();
@@ -33,9 +33,8 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-		Channel channel = ctx.channel();
 		if (this.channelRegisteredListener != null) {
-			channelRegisteredListener.accept(channel);
+			channelRegisteredListener.accept(ctx);
 		}else {
 			super.channelRegistered(ctx);
 		}
@@ -45,7 +44,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelUnregisteredListener != null) {
-			channelUnregisteredListener.accept(channel);
+			channelUnregisteredListener.accept(ctx);
 		}else {
 			super.channelUnregistered(ctx);
 		}
@@ -55,7 +54,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelActiveListener != null) {
-			channelActiveListener.accept(channel);
+			channelActiveListener.accept(ctx);
 		}else {
 			super.channelActive(ctx);
 		}
@@ -65,7 +64,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelInactiveListener != null) {
-			channelInactiveListener.accept(channel);
+			channelInactiveListener.accept(ctx);
 		}else {
 			super.channelInactive(ctx);
 		}
@@ -75,7 +74,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelReadListener != null) {
-			channelReadListener.accept(channel,msg);
+			channelReadListener.accept(ctx,msg);
 		}else {
 			super.channelRead(ctx, msg);
 		}
@@ -85,7 +84,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelReadCompleteListener != null) {
-			channelReadCompleteListener.accept(channel);
+			channelReadCompleteListener.accept(ctx);
 		}else {
 			super.channelReadComplete(ctx);
 		}
@@ -95,7 +94,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.userEventTriggeredListener != null) {
-			userEventTriggeredListener.accept(channel,evt);
+			userEventTriggeredListener.accept(ctx,evt);
 		}else {
 			super.userEventTriggered(ctx, evt);
 		}
@@ -105,7 +104,7 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.channelWritabilityChangedListener != null) {
-			channelWritabilityChangedListener.accept(channel);
+			channelWritabilityChangedListener.accept(ctx);
 		}else {
 			super.channelWritabilityChanged(ctx);
 		}
@@ -115,45 +114,45 @@ public class InboundCallBackHandler extends ChannelInboundHandlerAdapter {
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		Channel channel = ctx.channel();
 		if (this.exceptionCaughtListener != null) {
-			exceptionCaughtListener.accept(channel,cause);
+			exceptionCaughtListener.accept(ctx,cause);
 		}else {
 			super.exceptionCaught(ctx, cause);
 		}
 	}
 
-	public void setChannelRegisteredListener(Consumer<Channel> channelRegisteredListener) {
+	public void setChannelRegisteredListener(Consumer<ChannelHandlerContext> channelRegisteredListener) {
 		this.channelRegisteredListener = channelRegisteredListener;
 	}
 
-	public void setChannelUnregisteredListener(Consumer<Channel> channelUnregisteredListener) {
+	public void setChannelUnregisteredListener(Consumer<ChannelHandlerContext> channelUnregisteredListener) {
 		this.channelUnregisteredListener = channelUnregisteredListener;
 	}
 
-	public void setChannelActiveListener(Consumer<Channel> channelActiveListener) {
+	public void setChannelActiveListener(Consumer<ChannelHandlerContext> channelActiveListener) {
 		this.channelActiveListener = channelActiveListener;
 	}
 
-	public void setChannelInactiveListener(Consumer<Channel> channelInactiveListener) {
+	public void setChannelInactiveListener(Consumer<ChannelHandlerContext> channelInactiveListener) {
 		this.channelInactiveListener = channelInactiveListener;
 	}
 
-	public void setChannelReadListener(BiConsumer<Channel, Object> channelReadListener) {
+	public void setChannelReadListener(BiConsumer<ChannelHandlerContext, Object> channelReadListener) {
 		this.channelReadListener = channelReadListener;
 	}
 
-	public void setChannelReadCompleteListener(Consumer<Channel> channelReadCompleteListener) {
+	public void setChannelReadCompleteListener(Consumer<ChannelHandlerContext> channelReadCompleteListener) {
 		this.channelReadCompleteListener = channelReadCompleteListener;
 	}
 
-	public void setUserEventTriggeredListener(BiConsumer<Channel, Object> userEventTriggeredListener) {
+	public void setUserEventTriggeredListener(BiConsumer<ChannelHandlerContext, Object> userEventTriggeredListener) {
 		this.userEventTriggeredListener = userEventTriggeredListener;
 	}
 
-	public void setChannelWritabilityChangedListener(Consumer<Channel> channelWritabilityChangedListener) {
+	public void setChannelWritabilityChangedListener(Consumer<ChannelHandlerContext> channelWritabilityChangedListener) {
 		this.channelWritabilityChangedListener = channelWritabilityChangedListener;
 	}
 
-	public void setExceptionCaughtListener(BiConsumer<Channel, Throwable> exceptionCaughtListener) {
+	public void setExceptionCaughtListener(BiConsumer<ChannelHandlerContext, Throwable> exceptionCaughtListener) {
 		this.exceptionCaughtListener = exceptionCaughtListener;
 	}
 }

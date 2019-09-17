@@ -123,28 +123,28 @@ public class DestinationProxyHandler extends ChannelDuplexHandler {
 		final String socketString = address.toString();
 		EventExecutor executor = ctx.executor();
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
-		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
+		callBackHandler.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
-			public void accept(Channel channel, Object o) {
+			public void accept(ChannelHandlerContext c, Object o) {
 				ctx.channel().writeAndFlush(o);
 			}
 		});
 
-		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
+		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
 			@Override
-			public void accept(Channel channel, Throwable throwable) {
-				logger.error(channel.toString(),throwable);
-				channel.close();
+			public void accept(ChannelHandlerContext c, Throwable throwable) {
+				logger.error(c.channel().toString(),throwable);
+				c.channel().close();
 			}
 		});
 
-		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
+		callBackHandler.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
-			public void accept(Channel channel) {
+			public void accept(ChannelHandlerContext c) {
 				executor.execute(new Runnable() {
 					@Override
 					public void run() {
-						onTargetClose(ctx,channel);
+						onTargetClose(ctx,c.channel());
 					}
 				});
 			}

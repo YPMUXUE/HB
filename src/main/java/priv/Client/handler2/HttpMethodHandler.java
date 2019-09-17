@@ -61,34 +61,34 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		final Channel clientChannel = ctx.channel();
 		Message bindMessage = new BindV2Message(destination.getHostString(), destination.getPort());
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
-		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
+		callBackHandler.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
-			public void accept(Channel c, Object o) {
+			public void accept(ChannelHandlerContext c, Object o) {
 				clientChannel.writeAndFlush(o);
 			}
 		});
 
-		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
+		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
 			@Override
-			public void accept(Channel targetChannel, Throwable throwable) {
-				logger.error(targetChannel.toString(), throwable);
-				targetChannel.close();
+			public void accept(ChannelHandlerContext c, Throwable throwable) {
+				logger.error(c.channel().toString(), throwable);
+				c.channel().close();
 			}
 		});
 
-		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
+		callBackHandler.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
-			public void accept(Channel channel) {
+			public void accept(ChannelHandlerContext c) {
 				clientChannel.close();
 			}
 		});
 
-		callBackHandler.setChannelActiveListener(new Consumer<Channel>() {
+		callBackHandler.setChannelActiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
-			public void accept(Channel channel) {
-				clientChannel.pipeline().fireUserEventTriggered(new ConnectSuccessProxyEvent(channel));
-				channel.writeAndFlush(bindMessage);
-				clientChannel.closeFuture().addListener(f -> channel.eventLoop().execute(()->{channel.close();}));
+			public void accept(ChannelHandlerContext c) {
+				clientChannel.pipeline().fireUserEventTriggered(new ConnectSuccessProxyEvent(c.channel()));
+				c.channel().writeAndFlush(bindMessage);
+				clientChannel.closeFuture().addListener(f -> c.channel().eventLoop().execute(()->{c.channel().close();}));
 			}
 		});
 

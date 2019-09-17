@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler2.InboundCallBackHandler;
+import priv.common.message.ChannelDataEntry;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV1Message;
 import priv.common.message.frame.bind.BindV2Message;
@@ -72,9 +73,9 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-		if (msg instanceof DataChannelPair) {
-			Channel channel = ((DataChannelPair) msg).channel;
-			Object data = ((DataChannelPair) msg).data;
+		if (msg instanceof ChannelDataEntry) {
+			Channel channel = ((ChannelDataEntry) msg).getBindChannel();
+			Object data = ((ChannelDataEntry) msg).getData();
 			if (this.targetChannelFuture != null && Objects.equals(this.targetChannelFuture.channel(), channel)) {
 				if (data instanceof ByteBuf) {
 					msg = new ConnectMessage((ByteBuf) data);
@@ -83,6 +84,8 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 					ReferenceCountUtil.release(data);
 					return;
 				}
+			}else{
+				ReferenceCountUtil.release(data);
 			}
 		}
 		super.write(ctx, msg, promise);
@@ -182,25 +185,25 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		final String socketString = address.toString();
 		EventExecutor executor = ctx.executor();
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
-		callBackHandler.setChannelReadListener(new BiConsumer<Channel, Object>() {
+		callBackHandler.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
-			public void accept(Channel channel, Object o) {
-				ctx.channel().writeAndFlush(new DataChannelPair(channel, o));
+			public void accept(ChannelHandlerContext c, Object o) {
+				ctx.channel().writeAndFlush(new ChannelDataEntry<ByteBuf>(c.channel(), (ByteBuf) o));
 			}
 		});
 
-		callBackHandler.setExceptionCaughtListener(new BiConsumer<Channel, Throwable>() {
+		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
 			@Override
-			public void accept(Channel channel, Throwable throwable) {
-				logger.error(channel.toString(), throwable);
-				channel.close();
+			public void accept(ChannelHandlerContext c, Throwable throwable) {
+				logger.error(c.channel().toString(), throwable);
+				c.channel().close();
 			}
 		});
 
-		callBackHandler.setChannelInactiveListener(new Consumer<Channel>() {
+		callBackHandler.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
-			public void accept(Channel channel) {
-				final ProxyEvent event = new ProxyEvent(ProxyEvent.TARGET_INACTIVE, channel.newSucceededFuture());
+			public void accept(ChannelHandlerContext c) {
+				final ProxyEvent event = new ProxyEvent(ProxyEvent.TARGET_INACTIVE, c.channel().newSucceededFuture());
 				executor.execute(new Runnable() {
 					@Override
 					public void run() {
@@ -232,6 +235,12 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			}
 			ctx.pipeline().fireUserEventTriggered(event);
 		});
+	}
+
+	@Override
+	public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+		removeTargetChannel(true);
+		super.close(ctx, promise);
 	}
 
 	private boolean prepareConnect() {
@@ -306,15 +315,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 	}
 
-	public static class DataChannelPair {
-		private final Object data;
-		private final Channel channel;
-
-		DataChannelPair(Channel channel, Object object) {
-			this.data = object;
-			this.channel = channel;
-		}
-	}
 
 	private static class ProxyEvent {
 		static final int BIND_SUCCESS = 0;
