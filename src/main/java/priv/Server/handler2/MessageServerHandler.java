@@ -86,6 +86,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 				}
 			}else{
 				ReferenceCountUtil.release(data);
+				return;
 			}
 		}
 		super.write(ctx, msg, promise);

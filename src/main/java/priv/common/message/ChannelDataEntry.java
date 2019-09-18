@@ -34,22 +34,26 @@ public class ChannelDataEntry<T extends ReferenceCounted> implements ReferenceCo
 
 	@Override
 	public ReferenceCounted retain() {
-		return data.retain();
+		 data.retain();
+		 return this;
 	}
 
 	@Override
 	public ReferenceCounted retain(int increment) {
-		return data.retain(increment);
+		data.retain(increment);
+		return this;
 	}
 
 	@Override
 	public ReferenceCounted touch() {
-		return data.touch();
+		data.touch();
+		return this;
 	}
 
 	@Override
 	public ReferenceCounted touch(Object hint) {
-		return data.touch(hint);
+		data.touch(hint);
+		return this;
 	}
 
 	@Override

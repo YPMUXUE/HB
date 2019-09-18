@@ -69,6 +69,7 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 	private void handleSimpleProxy(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		ChannelFuture channelFuture;
 		Channel thisChannel = ctx.channel();
+		boolean isReconnect = false;
 		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
 			InboundCallBackHandler callBack = new InboundCallBackHandler();
 			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
@@ -100,6 +101,7 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 
 			this.proxyChannel = channelFuture.channel();
 			proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
+			isReconnect = true;
 		}else{
 			channelFuture = proxyChannel.newSucceededFuture();
 		}
@@ -116,8 +118,8 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 			msg.headers().remove(s);
 		});
 
-
-		boolean needToBind = !Objects.equals(destination,channelFuture.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).get());
+		boolean isNewAddr = !Objects.equals(destination,channelFuture.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).get());
+		boolean needToBind = isNewAddr || isReconnect;
 		channelFuture.addListener(new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
