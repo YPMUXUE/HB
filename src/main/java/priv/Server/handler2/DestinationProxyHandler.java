@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+@Deprecated
 public class DestinationProxyHandler extends ChannelDuplexHandler {
 
 	private static final Logger logger = LoggerFactory.getLogger(DestinationProxyHandler.class);

@@ -29,7 +29,7 @@ public class BindV2Translator implements MessageTranslator<BindV2Message> {
 		byte[] hostNameEncoded = new byte[hostLength];
 		buf.readBytes(hostNameEncoded, 0, hostLength);
 		String hostName = new String(hostNameEncoded, StandardCharsets.UTF_8);
-		int port = buf.readShort();
+		int port = buf.readUnsignedShort();
 		BindV2Message message = new BindV2Message(hostName,port);
 		message.setContentLength(length);
 		return message;

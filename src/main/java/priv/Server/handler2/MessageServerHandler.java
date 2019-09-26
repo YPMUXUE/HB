@@ -46,7 +46,11 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 
 	public MessageServerHandler() {
-		this.closeTargetChannel = true;
+		this(true);
+	}
+
+	public MessageServerHandler(boolean closeTargetChannel) {
+		this.closeTargetChannel = closeTargetChannel;
 	}
 
 	@Override
@@ -124,7 +128,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	private void handleConnect(ChannelHandlerContext ctx, ConnectMessage m) {
 		if (this.targetChannelFuture == null) {
 			ReferenceCountUtil.release(m);
-			ctx.channel().close();
+			ctx.channel().writeAndFlush(new CloseMessage());
 			return;
 		}
 
@@ -143,7 +147,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		Channel targetChannel = this.targetChannelFuture.channel();
 		if (targetChannel == null || !targetChannel.isActive()) {
 			ReferenceCountUtil.release(m);
-			ctx.channel().close().addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		} else {
 			targetChannel.writeAndFlush(content).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 		}
@@ -193,13 +196,13 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			}
 		});
 
-		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
-			@Override
-			public void accept(ChannelHandlerContext c, Throwable throwable) {
-				logger.error(c.channel().toString(), throwable);
-				c.channel().close();
-			}
-		});
+//		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
+//			@Override
+//			public void accept(ChannelHandlerContext c, Throwable throwable) {
+//				logger.error(c.channel().toString(), throwable);
+//				c.channel().close();
+//			}
+//		});
 
 		callBackHandler.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
