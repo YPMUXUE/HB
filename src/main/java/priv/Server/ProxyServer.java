@@ -48,7 +48,7 @@ public class ProxyServer {
                 pipeline.addLast("LengthFieldBasedFrameDecoder", HandlerHelper.newDefaultFrameDecoderInstance())
                         .addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(120))
                         .addLast("AllMessageTransferHandler", new AllMessageTransferHandler())
-                        .addLast("DestinationProxyHandler", new MessageServerHandler())
+                        .addLast("MessageServerHandler", new MessageServerHandler())
                         .addLast("EventLoggerHandler", new EventLoggerHandler("ProxyServer", true));
             }
         });

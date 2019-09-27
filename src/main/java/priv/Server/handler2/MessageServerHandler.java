@@ -71,7 +71,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 				throw new Exception("a unsupported header :" + connectionEvent);
 			}
 		} else {
-			throw new RuntimeException("DestinationProxyHandler#channelRead: the msg is not a instance of Message");
+			throw new RuntimeException("MessageServerHandler#channelRead: the msg is not a instance of Message");
 		}
 	}
 
