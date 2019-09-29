@@ -65,7 +65,7 @@ public class HostAndPort {
         }
 
         if (StringUtils.isEmpty(result.host) || StringUtils.isEmpty(result.port)) {
-            throw new NullPointerException("Host or Port can not be null");
+            throw new NullPointerException("Host or Port can not be null,uri:"+uri+",header:"+hostHeader);
         }
         return result;
     }

@@ -55,8 +55,16 @@ public class ProxyClient {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
+//                pipeline.addLast(new ChannelInboundHandlerAdapter(){
+//                    @Override
+//                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//                        logger.info(ctx.channel()+ByteBufUtil.hexDump(((ByteBuf) msg).retain()));
+//                        super.channelRead(ctx, msg);
+//                    }
+//                });
                 pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
-                pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(64*1024));
+                //TODO 由于message包长度字段目前设置为4 所以消息长度大于等于4会有问题
+                pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(0x7FFFFFFF));
                 pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
                 pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
                 pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());

@@ -148,7 +148,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		if (targetChannel == null || !targetChannel.isActive()) {
 			ReferenceCountUtil.release(m);
 		} else {
-			targetChannel.writeAndFlush(content).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+			targetChannel.writeAndFlush(content);
 		}
 
 	}
