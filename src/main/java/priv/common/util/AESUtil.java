@@ -6,8 +6,10 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,6 +47,21 @@ public class AESUtil {
         return null;
     }
 
+
+    public static byte[] encrypt(byte[] byteContent, String password) {
+        try {
+            Cipher cipher = Cipher.getInstance(DEFAULT_CIPHER_ALGORITHM);// 创建密码器
+
+            cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(password));// 初始化为加密模式的密码器
+
+            return cipher.doFinal(byteContent);
+        } catch (Exception ex) {
+            Logger.getLogger(AESUtil.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return null;
+    }
+
     /**
      * AES 解密操作
      *
@@ -65,6 +82,23 @@ public class AESUtil {
             byte[] result = cipher.doFinal(Base64.decodeBase64(content));
 
             return new String(result, "utf-8");
+        } catch (Exception ex) {
+            Logger.getLogger(AESUtil.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return null;
+    }
+
+    public static byte[] decrypt(byte[] content, String password) {
+
+        try {
+            //实例化
+            Cipher cipher = Cipher.getInstance(DEFAULT_CIPHER_ALGORITHM);
+
+            //使用密钥初始化，设置为解密模式
+            cipher.init(Cipher.DECRYPT_MODE, getSecretKey(password));
+
+            return cipher.doFinal(content);
         } catch (Exception ex) {
             Logger.getLogger(AESUtil.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -100,14 +134,17 @@ public class AESUtil {
 
     public static void main(String[] args) {
         long start=System.currentTimeMillis();
-        String s = "111";
+        String s = "12345678876543211234567887654321";
 
-        System.out.println("s:" + s);
+        byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
+        System.out.println("bytes:" + Arrays.toString(bytes));
+        System.out.println("size:" + bytes.length);
 
-        String s1 = AESUtil.encrypt(s, "1234");
-        System.out.println("s1:" + s1);
+        byte[] encryptResult = AESUtil.encrypt(bytes, "1234");
+        System.out.println("s1:" + Arrays.toString(encryptResult));
+        System.out.println("size:" + encryptResult.length);
 
-        System.out.println("s2:"+AESUtil.decrypt(s1, "1234"));
+        System.out.println("s2:"+Arrays.toString(AESUtil.decrypt(encryptResult, "1234")));
 
         long end=System.currentTimeMillis();
         System.out.println(end-start);
