@@ -1,9 +1,8 @@
 package priv.Server.handler2;
 
 import io.netty.buffer.ByteBuf;
-import priv.common.message.frame.Message;
-
-import java.net.InetSocketAddress;
+import io.netty.channel.Channel;
+import priv.Client.bean.HostAndPort;
 
 /**
  *  * @author  pyuan
@@ -15,9 +14,8 @@ import java.net.InetSocketAddress;
 public interface RemoteConnection {
 	ByteBuf read();
 	void write(ByteBuf data);
-	void write(Message data);
-	void bind(Message bindMessage);
+	void bind(HostAndPort hostAndPort);
 	void close();
-	InetSocketAddress getRemoteAddress();
+	Channel getChannel();
 
 }
