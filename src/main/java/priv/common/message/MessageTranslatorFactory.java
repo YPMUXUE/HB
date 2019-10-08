@@ -31,7 +31,7 @@ public class MessageTranslatorFactory {
 
 	public MessageTranslatorFactory(List<MessageTranslator> processors) {
 		if (CollectionUtils.isEmpty(processors)) {
-			throw new IllegalArgumentException("没有注册任何处理器");
+			throw new IllegalArgumentException("processor is empty");
 		}
 		Map<Short, MessageTranslator> tempProcessorMap = new HashMap<>(processors.size());
 		for (MessageTranslator processor : processors) {

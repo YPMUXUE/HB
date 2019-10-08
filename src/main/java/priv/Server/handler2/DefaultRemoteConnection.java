@@ -3,11 +3,9 @@ package priv.Server.handler2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import priv.common.message.frame.Message;
+import priv.Client.bean.HostAndPort;
 import priv.common.message.frame.bind.BindV1Message;
 import priv.common.message.frame.bind.BindV2Message;
-
-import java.net.InetSocketAddress;
 
 /**
  *  * @author  pyuan
@@ -34,19 +32,8 @@ public class DefaultRemoteConnection implements RemoteConnection {
 	}
 
 	@Override
-	public void write(Message data) {
+	public void bind(HostAndPort hostAndPort) {
 
-	}
-
-	@Override
-	public void bind(Message bindMessage) {
-		if (bindMessage instanceof BindV1Message){
-			handleBindV1((BindV1Message)bindMessage);
-		}else if (bindMessage instanceof BindV2Message){
-			handleBindV2((BindV2Message)bindMessage);
-		}else{
-			throw new IllegalArgumentException("wrong type of bindMessage"+bindMessage);
-		}
 	}
 
 	@Override
@@ -55,7 +42,7 @@ public class DefaultRemoteConnection implements RemoteConnection {
 	}
 
 	@Override
-	public InetSocketAddress getRemoteAddress() {
+	public Channel getChannel() {
 		return null;
 	}
 
