@@ -84,7 +84,7 @@ public class HostAndPort {
         return host;
     }
     public int getPort(){
-        return Integer.valueOf(port);
+        return Integer.parseInt(port);
     }
 
     @Override

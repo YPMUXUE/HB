@@ -6,6 +6,7 @@ import io.netty.util.ReferenceCounted;
 
 import java.util.Objects;
 
+@Deprecated
 public class Message implements ReferenceCounted {
     private short operationCode;
     private byte[] destination;
