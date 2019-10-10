@@ -17,6 +17,8 @@ public class StaticConfig {
     public static String LOCAL_HOST_ADDRESS="127.0.0.1";
     public static int LOCAL_HOST_PORT=9001;
 
+    public static String AES_KEY = "356lVHdOhaFDAthSHUcQiw==";
+
     static {
         try (InputStream resource = ResourceLoader.getResource("conf/config.properties")) {
             if (resource == null) {

@@ -15,13 +15,13 @@ import java.util.Arrays;
  *  *
  *  
  */
-public class AesEcbCrypto {
+public class AesCryptoEcbPKCS5Padding {
 	private static final String KEY_ALGORITHM = "AES";
 //	NoPadding
 	private String cipherAlgorithm = "AES/ECB/PKCS5Padding";
 	private final SecretKey secretKey;
 
-	public AesEcbCrypto(byte[] key) {
+	public AesCryptoEcbPKCS5Padding(byte[] key) {
 		this.secretKey = new SecretKeySpec(key, KEY_ALGORITHM);
 	}
 
@@ -46,7 +46,7 @@ public class AesEcbCrypto {
 	public static void main(String[] args) throws Exception {
 		byte[] content = new byte[16 * 100000];
 		Arrays.fill(content,(byte)123);
-		AesEcbCrypto aesCrypto = new AesEcbCrypto(generateKey("123",128));
+		AesCryptoEcbPKCS5Padding aesCrypto = new AesCryptoEcbPKCS5Padding(generateKey("123",128));
 		long start = System.currentTimeMillis();
 		for (int i = 0; i < 1; i++) {
 			byte[] encrypt = aesCrypto.encrypt(content);
