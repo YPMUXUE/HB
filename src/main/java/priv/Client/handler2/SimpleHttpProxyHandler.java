@@ -5,12 +5,16 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.util.AttributeKey;
+import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
+import priv.common.crypto.AesCrypto;
+import priv.common.crypto.AesCryptoEcbPKCS5Padding;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
+import priv.common.handler2.crypt.AesEcbCryptHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.frame.bind.BindV2Message;
 import priv.common.resource.StaticConfig;
@@ -88,7 +92,10 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 			ChannelInitializer channelInitializer = new ChannelInitializer() {
 				@Override
 				protected void initChannel(Channel ch) throws Exception {
+					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
+					final AesCrypto aesCrypto = new AesCryptoEcbPKCS5Padding(aesKey);
 					ChannelPipeline pipeline = ch.pipeline();
+					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesCrypto));
 					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
 					pipeline.addLast(new AllMessageTransferHandler());
 					pipeline.addLast(new HttpProxyMessageHandler());

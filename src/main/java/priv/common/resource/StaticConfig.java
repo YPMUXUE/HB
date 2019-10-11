@@ -18,6 +18,7 @@ public class StaticConfig {
     public static int LOCAL_HOST_PORT=9001;
 
     public static String AES_KEY = "356lVHdOhaFDAthSHUcQiw==";
+    public static int AES_KEY_LENGTH = 128;
 
     static {
         try (InputStream resource = ResourceLoader.getResource("conf/config.properties")) {
