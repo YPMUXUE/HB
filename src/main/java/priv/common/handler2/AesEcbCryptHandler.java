@@ -43,21 +43,21 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 	 * @see io.netty.handler.codec.LengthFieldBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)
 	 */
 	private ByteBuf splitFrame(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-		int hasLength = in.readableBytes();
-		if (headerBytes != null){
-			hasLength = hasLength + headerBytes.length;
-		}
-
-		if (hasLength < FRAME_HEADER_LENGTH) {
-			return null;
-		}
-		if (this.headerBytes == null){
-			byte[] encryptedHeaderBytes;
-			encryptedHeaderBytes = new byte[FRAME_HEADER_LENGTH];
-			in.readBytes(encryptedHeaderBytes);
+		if (headerBytes == null){
+			if (in.readableBytes() < FRAME_HEADER_LENGTH){
+				return null;
+			}
+			byte[] encryptedHeaderBytes = new byte[FRAME_HEADER_LENGTH];
+			in.readBytes(FRAME_HEADER_LENGTH);
 			this.headerBytes = this.aesCrypto.decrypt(encryptedHeaderBytes);
 		}
 		int frameLength = bytesToInt(headerBytes, LENGTH_OFFSET);
+		if (frameLength <= 0){
+			throw new CorruptedFrameException("frame Length field is less then 0:"+frameLength);
+		}
+		if (in.readableBytes() < frameLength) {
+			return null;
+		}
 
 		return null;
 
