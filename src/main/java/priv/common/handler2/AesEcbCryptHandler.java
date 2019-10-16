@@ -27,15 +27,8 @@ import java.util.List;
  * |  0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                              |                   "0xXXXXXX"                         |
  * +------------------------------------------------------------------------+------------------------------------------------------+
  * <p>
- *              +---------------------Digest----------------------+
- *              |                                                 |
- * +------------+----------------------+--------------------------+-----------------------------------------------------+
- * | Digest(32) |  content Length(4)   |    protocol sign(12)     |                       content                       |
- * |  0xXXXX    |    0x0000000X        |    0xXXXXXXXX            |                        0xXXXX                       |
- * +------------+----------------------+--------------------------+-----------------------------------------------------+
- * <p>
- *                                                                                      +------------Digest-------------+
- *                                                                                      |                               |
+ *              +---------------------Digest--------------------------------------------+------------Digest-------------+
+ *              |                                                                       |                               |
  * +------------+----------------------+--------------------------+---------------------+-------------------------------+
  * | Digest(32) |  content Length(4)   |    protocol sign(12)     |    Digest(32)       |          content              |
  * |  0xXXXX    |    0x0000000X        |    0xXXXXXXXX            |    0xXXXXXXXX       |           "1234"              |
@@ -52,6 +45,7 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 	private static final int CONTENT_LENGTH_OFFSET = DIGEST_LENGTH;
 	private static final byte[] PROTOCOL_SIGN;
 	private static final int PROTOCOL_SIGN_OFFSET = CONTENT_LENGTH_OFFSET + 4;
+
 	private final AesCrypto aesCrypto;
 	private byte[] headerBytes;
 
