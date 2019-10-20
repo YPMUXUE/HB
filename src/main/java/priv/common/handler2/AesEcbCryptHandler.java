@@ -1,7 +1,6 @@
 package priv.common.handler2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -10,13 +9,12 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.codec.digest.DigestUtils;
 import priv.common.crypto.AesCrypto;
 
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.security.MessageDigest;
 import java.util.List;
 
 /**
@@ -83,29 +81,44 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 		if (frameLength <= 0) {
 			throw new CorruptedFrameException("frame Length field is less then 0:" + frameLength);
 		}
-		if (!arraysEquals(this.headerBytes,PROTOCOL_SIGN_OFFSET,PROTOCOL_SIGN.length,PROTOCOL_SIGN)){
+		if (!arraysEquals(this.headerBytes, PROTOCOL_SIGN_OFFSET, PROTOCOL_SIGN.length, PROTOCOL_SIGN)) {
 			throw new CorruptedFrameException("wrong sign of frame. headers:" + Hex.encodeHexString(headerBytes));
 		}
 		if (in.readableBytes() < frameLength) {
 			return null;
 		}
-
-
-		return null;
-
+		byte[] contentBytes = new byte[frameLength];
+		in.readBytes(contentBytes);
+		contentBytes = this.aesCrypto.decrypt(contentBytes);
+		MessageDigest sha256Digest = DigestUtils.getSha256Digest();
+		sha256Digest.update(headerBytes, CONTENT_LENGTH_OFFSET, 4 + PROTOCOL_SIGN.length);
+		sha256Digest.update(contentBytes, 0, DIGEST_LENGTH);
+		byte[] headerDigest = sha256Digest.digest();
+		if (!arraysEquals(headerBytes, 0, DIGEST_LENGTH, headerDigest)) {
+			throw new CorruptedFrameException("wrong header digest:" + Hex.encodeHexString(headerBytes));
+		}
+		sha256Digest = DigestUtils.getSha256Digest();
+		sha256Digest.update(contentBytes, 0, DIGEST_LENGTH);
+		byte[] digest = sha256Digest.digest();
+		if (!arraysEquals(contentBytes, 0, DIGEST_LENGTH, digest)) {
+			throw new CorruptedFrameException("wrong content digest");
+		}
+		int decryptedFrameLength = contentBytes.length - DIGEST_LENGTH;
+		return Unpooled.buffer(decryptedFrameLength).writeBytes(contentBytes, DIGEST_LENGTH, decryptedFrameLength);
 	}
 
 	private Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-		ByteBuf frame = this.splitFrame(ctx, in);
+		ByteBuf frame;
+		try {
+			frame = this.splitFrame(ctx, in);
+		} catch (CorruptedFrameException e) {
+			this.headerBytes = null;
+			throw e;
+		}
 		if (frame == null) {
 			return null;
 		}
-		int contentLength = frame.readableBytes();
-		byte[] encryptedContent = new byte[contentLength];
-		frame.readBytes(encryptedContent);
-		frame.release();
-		byte[] decryptedContent = aesCrypto.decrypt(encryptedContent);
-		return Unpooled.buffer(decryptedContent.length).writeBytes(decryptedContent);
+		return frame;
 	}
 
 	@Override
@@ -171,15 +184,16 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 				| (src[offset + 3] & 0xFF));
 		return value;
 	}
-	private static boolean arraysEquals(byte[] array1,int array1Offset, int array1Length, byte[] array2) {
-		if (array1 == null || array2 == null){
+
+	private static boolean arraysEquals(byte[] array1, int array1Offset, int array1Length, byte[] array2) {
+		if (array1 == null || array2 == null) {
 			return false;
 		}
-		if (array1Length != array2.length){
+		if (array1Length != array2.length) {
 			return false;
 		}
 		for (int i = 0; i < array1Length; i++) {
-			if (array1[i+array1Offset] != array2[i]){
+			if (array1[i + array1Offset] != array2[i]) {
 				return false;
 			}
 		}
