@@ -11,6 +11,7 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import priv.common.crypto.AesCrypto;
+import priv.common.crypto.AesCryptoCfbNoPadding;
 
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -53,9 +54,14 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 		assert PROTOCOL_SIGN.length == 12;
 	}
 
-	public AesEcbCryptHandler(AesCrypto aesCrypto) {
-		this.aesCrypto = aesCrypto;
+	public AesEcbCryptHandler(byte[] key) {
+		this.aesCrypto = new AesCryptoCfbNoPadding(key);
 	}
+
+	public AesEcbCryptHandler(byte[] key, byte[] iv) {
+		this.aesCrypto = new AesCryptoCfbNoPadding(key, iv);
+	}
+
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -124,19 +130,6 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 		}
 	}
 
-//	private Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-//		ByteBuf frame;
-//		try {
-//			frame = this.splitFrame(ctx, in);
-//		} catch (CorruptedFrameException e) {
-//			this.headerBytes = null;
-//			throw e;
-//		}
-//		if (frame == null) {
-//			return null;
-//		}
-//		return frame;
-//	}
 
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

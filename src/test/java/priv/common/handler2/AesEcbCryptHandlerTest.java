@@ -27,11 +27,13 @@ public class AesEcbCryptHandlerTest {
 		for (int i = 0; i < 1; i++) {
 			byte[] content = new byte[123];
 			Arrays.fill(content, (byte) 123);
-			ByteBuf in = Unpooled.buffer(48 + 32 + content.length);
-			encrypt(in,content);
+			ByteBuf in = Unpooled.buffer();
+			byte[] encrypt = encrypt(content);
+			in.writeBytes(encrypt,0,100);
 
-			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(aes));
+			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(Base64.decodeBase64(StaticConfig.AES_KEY)));
 			embeddedChannel.writeInbound(in);
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,100,encrypt.length-100));
 			embeddedChannel.finish();
 			ByteBuf o = embeddedChannel.readInbound();
 			int x = o.readableBytes();
@@ -49,8 +51,9 @@ public class AesEcbCryptHandlerTest {
 			byte[] content = new byte[123];
 			Arrays.fill(content, (byte) 123);
 			ByteBuf in = Unpooled.buffer(48 + 32 + content.length);
-			encrypt(in,content);
-			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(aes));
+			byte[] encrypt = encrypt(content);
+			in.writeBytes(encrypt);
+			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(Base64.decodeBase64(StaticConfig.AES_KEY)));
 
 			embeddedChannel.writeOutbound(Unpooled.buffer().writeBytes(content));
 			embeddedChannel.finish();
@@ -59,8 +62,8 @@ public class AesEcbCryptHandlerTest {
 		}
 	}
 
-	private static void encrypt(ByteBuf in,byte[] content) throws Exception{
-
+	private static byte[] encrypt(byte[] content) throws Exception{
+		byte[] result = new byte[content.length +48+32];
 		MessageDigest sha256Digest = DigestUtils.getSha256Digest();
 		byte[] contentDigest = sha256Digest.digest(content);
 		sha256Digest.reset();
@@ -76,11 +79,15 @@ public class AesEcbCryptHandlerTest {
 		System.arraycopy("123456789012".getBytes(StandardCharsets.US_ASCII), 0, decryptHeader, 32+4, 12);
 		byte[] encryptHeader = aes.encrypt(decryptHeader);
 		assert encryptHeader.length == 48;
-		in.writeBytes(encryptHeader);
+
 		byte[] decryptContent = new byte[32+content.length];
 		System.arraycopy(contentDigest,0,decryptContent,0,contentDigest.length);
 		System.arraycopy(content,0,decryptContent,headerDigest.length,content.length);
 		byte[] encryptContent = aes.encrypt(decryptContent);
-		in.writeBytes(encryptContent);
+//		in.writeBytes(encryptHeader);
+		System.arraycopy(encryptHeader,0,result,0,encryptHeader.length);
+//		in.writeBytes(encryptContent);
+		System.arraycopy(encryptContent,0,result,encryptHeader.length,encryptContent.length);
+		return result;
 	}
 }
