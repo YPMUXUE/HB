@@ -27,13 +27,12 @@ public class AesEcbCryptHandlerTest {
 		for (int i = 0; i < 1; i++) {
 			byte[] content = new byte[123];
 			Arrays.fill(content, (byte) 123);
-			ByteBuf in = Unpooled.buffer();
 			byte[] encrypt = encrypt(content);
-			in.writeBytes(encrypt,0,100);
 
 			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(Base64.decodeBase64(StaticConfig.AES_KEY)));
-			embeddedChannel.writeInbound(in);
-			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,100,encrypt.length-100));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,0,10));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,10,encrypt.length-10));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,0,100));
 			embeddedChannel.finish();
 			ByteBuf o = embeddedChannel.readInbound();
 			int x = o.readableBytes();
