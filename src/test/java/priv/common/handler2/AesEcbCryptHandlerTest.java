@@ -30,17 +30,28 @@ public class AesEcbCryptHandlerTest {
 			byte[] encrypt = encrypt(content);
 
 			embeddedChannel = new EmbeddedChannel(new AesEcbCryptHandler(Base64.decodeBase64(StaticConfig.AES_KEY)));
+
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt));
+
 			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,0,10));
 			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,10,encrypt.length-10));
+
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,0,10));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,10,10));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,20,encrypt.length-20));
+
 			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,0,100));
+			embeddedChannel.writeInbound(Unpooled.buffer().writeBytes(encrypt,100,encrypt.length-100));
 			embeddedChannel.finish();
 			ByteBuf o = embeddedChannel.readInbound();
 			int x = o.readableBytes();
 			byte[] result = new byte[x];
 			o.readBytes(result);
-			System.out.println(Arrays.equals(result, content));
-//			System.gc();
-
+			assert Arrays.equals(result, content);
+			for (int j = 0; j < 2; j++) {
+				ByteBuf o1 = embeddedChannel.readInbound();
+				assert ByteBufUtil.equals(o,o1);
+			}
 		}
 		long end = System.currentTimeMillis();
 		System.out.println(start - end);

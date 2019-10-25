@@ -48,6 +48,7 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 
 	private final AesCrypto aesCrypto;
 	private byte[] headerBytes;
+	private boolean decodeHeader = true;
 
 	static {
 		PROTOCOL_SIGN = "123456789012".getBytes(StandardCharsets.US_ASCII);
@@ -70,6 +71,7 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 			decoded = decode(ctx, in);
 		} catch (CorruptedFrameException e) {
 			this.headerBytes = null;
+			this.decodeHeader = true;
 			throw e;
 		}
 		if (decoded != null) {
@@ -82,23 +84,30 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 	 * @see io.netty.handler.codec.LengthFieldBasedFrameDecoder#decode(ChannelHandlerContext, ByteBuf)
 	 */
 	private ByteBuf decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-		if (headerBytes == null) {
+		if (decodeHeader) {
 			if (in.readableBytes() < FRAME_HEADER_LENGTH) {
 				return null;
 			}
-			byte[] encryptedHeaderBytes = new byte[FRAME_HEADER_LENGTH];
-			in.readBytes(encryptedHeaderBytes);
+			byte[] encryptedHeaderBytes;
+			if (this.headerBytes == null) {
+				encryptedHeaderBytes = new byte[FRAME_HEADER_LENGTH];
+			} else {
+				encryptedHeaderBytes = this.headerBytes;
+			}
+			in.readBytes(encryptedHeaderBytes,0,FRAME_HEADER_LENGTH);
 			this.headerBytes = this.aesCrypto.decrypt(encryptedHeaderBytes);
 			checkHeaders(headerBytes);
+			decodeHeader = false;
 		}
-		int frameLength = bytesToInt(headerBytes, CONTENT_LENGTH_OFFSET);
+		int encryptFrameLength = bytesToInt(headerBytes, CONTENT_LENGTH_OFFSET);
 
-		if (in.readableBytes() < frameLength) {
+		if (in.readableBytes() < encryptFrameLength) {
 			return null;
 		}
-		byte[] contentBytes = new byte[frameLength];
+		byte[] contentBytes = new byte[encryptFrameLength];
 		in.readBytes(contentBytes);
 		contentBytes = this.aesCrypto.decrypt(contentBytes);
+		//头部摘要
 		MessageDigest sha256Digest = DigestUtils.getSha256Digest();
 		sha256Digest.update(headerBytes, CONTENT_LENGTH_OFFSET, CONTENT_LENGTH_FIELD_LENGTH + PROTOCOL_SIGN.length);
 		sha256Digest.update(contentBytes, 0, DIGEST_LENGTH);
@@ -106,14 +115,15 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 		if (!arraysEquals(headerBytes, 0, DIGEST_LENGTH, headerDigest)) {
 			throw new CorruptedFrameException("wrong header digest:" + Hex.encodeHexString(headerBytes));
 		}
-		sha256Digest = DigestUtils.getSha256Digest();
+		//内容摘要
+		sha256Digest.reset();
 		sha256Digest.update(contentBytes, DIGEST_LENGTH, contentBytes.length - DIGEST_LENGTH);
-		byte[] digest = sha256Digest.digest();
-		if (!arraysEquals(contentBytes, 0, DIGEST_LENGTH, digest)) {
+		byte[] contentDigest = sha256Digest.digest();
+		if (!arraysEquals(contentBytes, 0, DIGEST_LENGTH, contentDigest)) {
 			throw new CorruptedFrameException("wrong content digest");
 		}
 		int decryptedFrameLength = contentBytes.length - DIGEST_LENGTH;
-		this.headerBytes = null;
+		this.decodeHeader = true;
 		return Unpooled.buffer(decryptedFrameLength).writeBytes(contentBytes, DIGEST_LENGTH, decryptedFrameLength);
 	}
 
@@ -133,15 +143,15 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+		ByteBuf encode = encode(ctx, (ByteBuf) msg, promise);
+		ctx.write(encode,promise);
+	}
+
+	private ByteBuf encode(ChannelHandlerContext ctx, ByteBuf buf, ChannelPromise promise) throws Exception {
 		try {
-			if (!(msg instanceof ByteBuf)) {
-				throw new IllegalArgumentException("msg is not a instance of ByteBuf");
-			}
-			ByteBuf buf = (ByteBuf) msg;
 			int frameLength = buf.readableBytes();
 			if (frameLength == 0) {
-				ctx.write(buf, promise);
-				return;
+				return buf;
 			}
 			byte[] content = new byte[frameLength + DIGEST_LENGTH];
 			buf.readBytes(content, DIGEST_LENGTH, frameLength);
@@ -162,15 +172,15 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 			byte[] headerDigest = sha256Digest.digest();
 			sha256Digest.reset();
 			contentDigest = null;
-			System.arraycopy(headerDigest,0,headerBytes,0,headerDigest.length);
+			System.arraycopy(headerDigest,0,headerBytes,0,DIGEST_LENGTH);
 			final byte[] encryptedHeader = aesCrypto.encrypt(headerBytes);
 			headerBytes = null;
 
-			ByteBuf encryptedContentBuffer = ctx.alloc().buffer(encryptedHeader.length + encryptedContent.length);
+			ByteBuf encryptedContentBuffer = buf.alloc().buffer(encryptedHeader.length + encryptedContent.length);
 			encryptedContentBuffer.writeBytes(encryptedHeader).writeBytes(encryptedContent);
-			ctx.write(encryptedContentBuffer, promise);
+			return encryptedContentBuffer;
 		} finally {
-			ReferenceCountUtil.release(msg);
+			ReferenceCountUtil.release(buf);
 		}
 	}
 
