@@ -144,14 +144,18 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 		ByteBuf encode = encode(ctx, (ByteBuf) msg, promise);
-		ctx.write(encode,promise);
+		if (encode == null){
+			ctx.write(Unpooled.EMPTY_BUFFER, promise);
+		}else {
+			ctx.write(encode, promise);
+		}
 	}
 
 	private ByteBuf encode(ChannelHandlerContext ctx, ByteBuf buf, ChannelPromise promise) throws Exception {
 		try {
 			int frameLength = buf.readableBytes();
 			if (frameLength == 0) {
-				return buf;
+				return null;
 			}
 			byte[] content = new byte[frameLength + DIGEST_LENGTH];
 			buf.readBytes(content, DIGEST_LENGTH, frameLength);

@@ -6,13 +6,11 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import priv.common.crypto.AesCryptoCfbNoPadding;
 import priv.common.resource.StaticConfig;
-import priv.common.resource.SystemConfig;
 
-import javax.xml.transform.Result;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -22,6 +20,12 @@ public class AesEcbCryptHandlerTest {
 	private static final AesCryptoCfbNoPadding aes = new AesCryptoCfbNoPadding(Base64.decodeBase64(StaticConfig.AES_KEY));
 
 	public static void main(String[] args)throws Exception {
+		AesCryptoCfbNoPadding aesCryptoCfbNoPadding = new AesCryptoCfbNoPadding(Base64.decodeBase64(StaticConfig.AES_KEY));
+		byte[] decrypt = aesCryptoCfbNoPadding.decrypt(Hex.decodeHex("089f7fbfe2eb2fb98a3ac7e21ba393590da1e69710f7ecc1f5779b04855c7fa0c4f2ad4209937ac3aa81f0705303a1a5"));
+		System.out.println(Arrays.toString(decrypt));
+	}
+
+	public static void main1(String[] args)throws Exception {
 		long start = System.currentTimeMillis();
 		EmbeddedChannel embeddedChannel;
 		for (int i = 0; i < 1; i++) {

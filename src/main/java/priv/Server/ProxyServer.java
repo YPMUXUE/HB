@@ -8,12 +8,10 @@ import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Server.handler2.MessageServerHandler;
-import priv.common.crypto.AesCrypto;
-import priv.common.crypto.AesCryptoEcbPKCS5Padding;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
+import priv.common.handler2.AesEcbCryptHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
-import priv.common.handler2.crypt.AesEcbCryptHandler;
 import priv.common.resource.StaticConfig;
 import priv.common.util.HandlerHelper;
 
@@ -45,13 +43,12 @@ public class ProxyServer {
 
     public static void main(String[] args) throws Exception {
         byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
-        final AesCrypto aesCrypto = new AesCryptoEcbPKCS5Padding(aesKey);
         ProxyServer proxyServer = new ProxyServer(new InetSocketAddress(StaticConfig.PROXY_SERVER_ADDRESS,StaticConfig.PROXY_SERVER_PORT), new ChannelInitializer() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
 
-                pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesCrypto));
+                pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
                 pipeline.addLast("LengthFieldBasedFrameDecoder", HandlerHelper.newDefaultFrameDecoderInstance())
                         .addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(120))
                         .addLast("AllMessageTransferHandler", new AllMessageTransferHandler())

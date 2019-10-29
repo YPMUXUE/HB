@@ -12,9 +12,9 @@ import priv.Client.bean.HostAndPort;
 import priv.common.crypto.AesCrypto;
 import priv.common.crypto.AesCryptoEcbPKCS5Padding;
 import priv.common.handler.EventLoggerHandler;
+import priv.common.handler2.AesEcbCryptHandler;
 import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
-import priv.common.handler2.crypt.AesEcbCryptHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.frame.bind.BindV2Message;
 import priv.common.resource.StaticConfig;
@@ -93,9 +93,8 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 				@Override
 				protected void initChannel(Channel ch) throws Exception {
 					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
-					final AesCrypto aesCrypto = new AesCryptoEcbPKCS5Padding(aesKey);
 					ChannelPipeline pipeline = ch.pipeline();
-					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesCrypto));
+					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
 					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
 					pipeline.addLast(new AllMessageTransferHandler());
 					pipeline.addLast(new HttpProxyMessageHandler());
