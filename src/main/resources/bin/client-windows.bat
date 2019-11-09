@@ -1,0 +1,1 @@
+javaw -classpath lib\*; priv.Client.window.DefaultTray
