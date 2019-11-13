@@ -15,17 +15,19 @@
     <profiles>
         <profile>
             <id>s</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <MainClass>priv.Server.ProxyServer</MainClass>
+                <ProfileDir>server</ProfileDir>
             </properties>
         </profile>
         <profile>
             <id>c</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <MainClass>priv.Client.ProxyClient</MainClass>
+                <ProfileDir>client</ProfileDir>
             </properties>
         </profile>
     </profiles>
@@ -86,7 +88,9 @@
                 </excludes>
                 <filtering>true</filtering>
             </resource>
-
+            <resource>
+                <directory>profile/${ProfileDir}</directory>
+            </resource>
         </resources>
     </build>
 
