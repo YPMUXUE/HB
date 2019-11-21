@@ -131,6 +131,8 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 						channel.write(bindMessage);
 					}
 					channel.writeAndFlush(msg);
+				}else{
+					ReferenceCountUtil.release(msg);
 				}
 			}
 		});

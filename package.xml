@@ -9,6 +9,10 @@
 			<directory>src/main/resources</directory>
 			<outputDirectory></outputDirectory>
 		</fileSet>
+		<fileSet>
+			<directory>profile/${ProfileDir}</directory>
+			<outputDirectory></outputDirectory>
+		</fileSet>
 	</fileSets>
 	<dependencySets>
 		<dependencySet>
