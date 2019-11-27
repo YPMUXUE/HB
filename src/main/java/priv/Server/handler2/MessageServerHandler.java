@@ -196,14 +196,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			}
 		});
 
-//		callBackHandler.setExceptionCaughtListener(new BiConsumer<ChannelHandlerContext, Throwable>() {
-//			@Override
-//			public void accept(ChannelHandlerContext c, Throwable throwable) {
-//				logger.error(c.channel().toString(), throwable);
-//				c.channel().close();
-//			}
-//		});
-
 		callBackHandler.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 			@Override
 			public void accept(ChannelHandlerContext c) {
@@ -234,7 +226,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			if (f.isSuccess()) {
 				event = new ProxyEvent(ProxyEvent.BIND_SUCCESS, f);
 			} else {
-				logger.info(socketString + "bind failed");
+				logger.error("connection:{},address:{},bind failed",f.channel().toString(),socketString);
 				event = new ProxyEvent(ProxyEvent.BIND_FAILED, f);
 			}
 			ctx.pipeline().fireUserEventTriggered(event);
