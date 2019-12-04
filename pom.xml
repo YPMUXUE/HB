@@ -92,6 +92,11 @@
                 <directory>profile/${ProfileDir}</directory>
             </resource>
         </resources>
+        <filters>
+            <filter>
+                parameters.properties
+            </filter>
+        </filters>
     </build>
 
     <dependencies>
