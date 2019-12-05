@@ -6,13 +6,14 @@
 
 	<fileSets>
 		<fileSet>
-			<directory>src/main/resources</directory>
+			<directory>${compiler.target.dir}</directory>
 			<outputDirectory></outputDirectory>
+<!--			<filtered>true</filtered>-->
 		</fileSet>
-		<fileSet>
-			<directory>profile/${ProfileDir}</directory>
-			<outputDirectory></outputDirectory>
-		</fileSet>
+<!--		<fileSet>-->
+<!--			<directory>profile/${ProfileDir}</directory>-->
+<!--			<outputDirectory></outputDirectory>-->
+<!--		</fileSet>-->
 	</fileSets>
 	<dependencySets>
 		<dependencySet>

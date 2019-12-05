@@ -11,6 +11,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <compiler.source.version>8</compiler.source.version>
         <compiler.target.version>8</compiler.target.version>
+        <compiler.target.dir>classes</compiler.target.dir>
     </properties>
     <profiles>
         <profile>
@@ -32,6 +33,7 @@
         </profile>
     </profiles>
     <build>
+        <outputDirectory>${compiler.target.dir}</outputDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
