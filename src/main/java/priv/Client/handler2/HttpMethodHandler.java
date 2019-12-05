@@ -195,7 +195,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 
 		//删除当前连接下ChannelHandler
 		ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
-		ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+//		ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
 		ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler());
 		ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
 

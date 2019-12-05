@@ -4,7 +4,7 @@ package priv.common.message.frame;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
 
-public abstract class AbstractByteBufContentMessage implements ByteBufContentMessage {
+public abstract class AbstractByteBufContentMessage implements ContentMessage<ByteBuf> , ReferenceCounted {
 	protected ByteBuf content;
 
 	@Override
