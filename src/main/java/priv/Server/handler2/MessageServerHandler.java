@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler2.InboundCallBackHandler;
+import priv.common.log.LogUtil;
 import priv.common.message.ChannelDataEntry;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV1Message;
@@ -167,7 +168,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		} catch (UnknownHostException e) {
 			ctx.writeAndFlush(new ConnectionEstablishFailedMessage("unknown Host:" + host));
 			logger.error("unknown Host:" + host);
-			//note: 先不主动关闭连接 等超时handler触发了再关闭
+			//note: 不主动关闭连接
 			return;
 		}
 		this.connectRemoteAddress(ctx, address);
@@ -226,7 +227,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			if (f.isSuccess()) {
 				event = new ProxyEvent(ProxyEvent.BIND_SUCCESS, f);
 			} else {
-				logger.error("connection:{},address:{},bind failed",f.channel().toString(),socketString);
+				logger.error("connection:{},address:{},bind failed.{}", f.channel().toString(), socketString, f.cause() == null ? "" : LogUtil.stackTraceToString(f.cause()));
 				event = new ProxyEvent(ProxyEvent.BIND_FAILED, f);
 			}
 			ctx.pipeline().fireUserEventTriggered(event);
@@ -313,9 +314,10 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 
 	private static class ProxyEvent {
-		static final int BIND_SUCCESS = 0;
-		static final int BIND_FAILED = 1;
-		static final int TARGET_INACTIVE = 2;
+		private static final int BIND_SUCCESS = 0;
+		private static final int BIND_FAILED = 1;
+		private static final int TARGET_INACTIVE = 2;
+
 		private final int type;
 		private final ChannelFuture channelFuture;
 

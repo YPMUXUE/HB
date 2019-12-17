@@ -9,15 +9,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 
 public class Connections {
 	private static final Bootstrap defaultBootstrap=new Bootstrap();
-	public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+//	public static final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
 	public static ChannelFuture connect(EventLoop eventLoop, SocketAddress address, ChannelInitializer channelInitializer){
 		Bootstrap bootstrap = defaultBootstrap.clone();
-		bootstrap.group(eventLoop == null ?  eventLoopGroup: eventLoop)
+		bootstrap.group(Objects.requireNonNull(eventLoop))
 				.channel(NioSocketChannel.class)
 				.handler(channelInitializer);
 		return bootstrap.connect(address);
