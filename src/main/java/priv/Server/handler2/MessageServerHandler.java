@@ -3,6 +3,7 @@ package priv.Server.handler2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,7 @@ import priv.common.resource.ConnectionEvents;
 import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -47,12 +49,9 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 
 	public MessageServerHandler() {
-		this(true);
+		this.closeTargetChannel = true;
 	}
 
-	public MessageServerHandler(boolean closeTargetChannel) {
-		this.closeTargetChannel = closeTargetChannel;
-	}
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -79,18 +78,19 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 		if (msg instanceof ChannelDataEntry) {
-			Channel channel = ((ChannelDataEntry) msg).getBindChannel();
-			Object data = ((ChannelDataEntry) msg).getData();
+			ChannelDataEntry<? extends ReferenceCounted> m = (ChannelDataEntry<? extends ReferenceCounted>) msg;
+			Channel channel = m.getBindChannel();
+			ReferenceCounted data = m.getData();
 			if (this.targetChannelFuture != null && Objects.equals(this.targetChannelFuture.channel(), channel)) {
-				if (data instanceof ByteBuf) {
-					msg = new ConnectMessage((ByteBuf) data);
-				} else {
-					logger.error("data is not a instance of byteBuf:" + data.toString());
-					ReferenceCountUtil.release(data);
-					return;
-				}
+				msg = new ConnectMessage((ByteBuf) data);
 			}else{
 				ReferenceCountUtil.release(data);
+				Channel targetChannel = null;
+				if (this.targetChannelFuture != null) {
+					targetChannel = this.targetChannelFuture.channel();
+				}
+				promise.tryFailure(new IOException("targetChannelFuture is null or channel is reset by others"
+						+ (targetChannel == null ? "" : targetChannel.toString())));
 				return;
 			}
 		}
@@ -100,13 +100,11 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		ChannelFuture f = this.targetChannelFuture;
-		if (f == null) {
-			super.channelInactive(ctx);
-		} else {
+		if (f != null) {
 			removeTargetChannel(closeTargetChannel);
 			this.targetChannelFuture = null;
-			super.channelInactive(ctx);
 		}
+		super.channelInactive(ctx);
 	}
 
 	@Override
@@ -151,7 +149,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		} else {
 			targetChannel.writeAndFlush(content);
 		}
-
 	}
 
 	private void handleBindV2(ChannelHandlerContext ctx, BindV2Message m) throws Exception {
