@@ -7,6 +7,9 @@
 	<fileSets>
 		<fileSet>
 			<directory>${compiler.target.dir}</directory>
+			<excludes>
+				<exclude>priv/</exclude>
+			</excludes>
 			<outputDirectory></outputDirectory>
 <!--			<filtered>true</filtered>-->
 		</fileSet>
