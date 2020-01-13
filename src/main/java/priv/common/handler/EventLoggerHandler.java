@@ -18,7 +18,6 @@ import java.util.function.BiFunction;
 public class EventLoggerHandler extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(EventLoggerHandler.class);
     private final BiFunction<ChannelHandlerContext,Throwable,String> exceptionHandler;
-    private final boolean logClose;
     private final String moduleName;
     private Collection<Class> ignoreStackTrace = new HashSet<>(Arrays.asList(TooLongFrameException.class, ReadTimeoutException.class, WriteTimeoutException.class));
     public static final BiFunction<ChannelHandlerContext,Throwable,String> DEFAULT_HANDLER=new BiFunction<ChannelHandlerContext, Throwable, String>() {
@@ -28,37 +27,36 @@ public class EventLoggerHandler extends ChannelDuplexHandler {
         }
     };
 
-    public EventLoggerHandler(String moduleName, boolean logClose){
-        this(moduleName,logClose,DEFAULT_HANDLER);
+    public EventLoggerHandler(String moduleName){
+        this(moduleName, DEFAULT_HANDLER);
     }
-    public EventLoggerHandler(String moduleName, boolean logClose,BiFunction<ChannelHandlerContext, Throwable,String> exceptionHandler) {
+    public EventLoggerHandler(String moduleName, BiFunction<ChannelHandlerContext, Throwable, String> exceptionHandler) {
         this.exceptionHandler = exceptionHandler;
-        this.logClose=logClose;
         this.moduleName = moduleName == null ? "" : moduleName;
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error(moduleName + " : " + exceptionHandler.apply(ctx, cause));
-        Class c = cause.getClass();
-        if (!ignoreStackTrace.contains(c)) {
-            logger.info(moduleName + " current stack trace:", new Exception("stack trace"));
+        if (logger.isErrorEnabled()) {
+            logger.error("{}:{}", moduleName, exceptionHandler.apply(ctx, cause));
+            Class c = cause.getClass();
+            if (!ignoreStackTrace.contains(c)) {
+                logger.error("{} current stack trace:{}",ctx.channel(), LogUtil.stackTraceToString(new Exception("stack trace")));
+            }
         }
         ctx.channel().close();
     }
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (logClose) {
-            logger.info(moduleName + " : " + ctx.channel() + "call close.");
-        }
+        logger.info("{}:{},call close", moduleName, ctx.channel().toString());
 //         promise.addListener(LogUtil.LOG_IF_FAILED);
         super.close(ctx, promise);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        logger.info(moduleName + " : " + ctx.channel() + "channel Inactive.");
+        logger.info("{}:{},channel Inactive", moduleName, ctx.channel().toString());
         super.channelInactive(ctx);
     }
 

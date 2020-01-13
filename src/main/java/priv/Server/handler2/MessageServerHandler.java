@@ -212,7 +212,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 				ChannelPipeline pipeline = ch.pipeline();
 				pipeline.addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(StaticConfig.timeout));
 				pipeline.addLast("InboundCallBackHandler", callBackHandler);
-				pipeline.addLast("EventLoggerHandler", new EventLoggerHandler("ProxyChannel", true));
+				pipeline.addLast("EventLoggerHandler", new EventLoggerHandler("ProxyChannel"));
 			}
 		};
 
