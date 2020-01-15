@@ -4,3 +4,4 @@ target/
 /classes/
 /log/
 /re/
+/src/test/java/priv/ignore/

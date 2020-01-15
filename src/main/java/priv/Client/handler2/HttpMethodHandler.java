@@ -96,7 +96,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 					pipeline.addLast(new HttpProxyMessageHandler());
 					pipeline.addLast(new HttpRequestEncoder());
 					pipeline.addLast(callBack);
-					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel",true));
+					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
 				}
 			};
 			channelFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
@@ -187,7 +187,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				//inbound消息转发
 				ch.pipeline().addLast("InboundCallBackHandler", callBackHandler);
 				//log
-				ch.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("ClientToProxyServer", true));
+				ch.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("ClientToProxyServer"));
 			}
 		};
 
@@ -197,7 +197,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		ctx.pipeline().forEach((entry) -> ctx.pipeline().remove(entry.getKey()));
 //		ctx.pipeline().addLast("ReadTimeoutHandler", new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
 		ctx.pipeline().addLast("ConnectProxyHandler", new ConnectProxyHandler());
-		ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer", true));
+		ctx.pipeline().addLast("EventLoggerHandler", new EventLoggerHandler("RequestServer"));
 
 
 		ChannelFuture connectPromise = Connections.connect(clientChannel.eventLoop(), getProxyAddress(), channelInitializer);

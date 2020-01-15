@@ -66,7 +66,7 @@ public class ProxyClient {
 				pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
 //                pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
 				pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
-				pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient",true));
+				pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient"));
 			}
 		});
 		proxyClient.serverChannel.closeFuture().addListener((f) -> {

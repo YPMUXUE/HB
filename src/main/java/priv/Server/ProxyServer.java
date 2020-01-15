@@ -53,7 +53,7 @@ public class ProxyServer {
                         .addLast("ReadWriteTimeoutHandler", new ReadWriteTimeoutHandler(120))
                         .addLast("AllMessageTransferHandler", new AllMessageTransferHandler())
                         .addLast("MessageServerHandler", new MessageServerHandler())
-                        .addLast("EventLoggerHandler", new EventLoggerHandler("ProxyServer", true));
+                        .addLast("EventLoggerHandler", new EventLoggerHandler("ProxyServer"));
             }
         });
         proxyServer.serverChannel.closeFuture().addListener((f) -> {

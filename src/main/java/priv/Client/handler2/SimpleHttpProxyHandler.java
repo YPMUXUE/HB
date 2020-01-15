@@ -99,7 +99,7 @@ public class SimpleHttpProxyHandler extends ChannelDuplexHandler {
 					pipeline.addLast(new HttpProxyMessageHandler());
 					pipeline.addLast(new HttpRequestEncoder());
 					pipeline.addLast(callBack);
-					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel",true));
+					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
 				}
 			};
 			channelFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);

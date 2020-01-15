@@ -1,6 +1,8 @@
 package priv.Server.handler2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -109,6 +111,9 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+		if (logger.isInfoEnabled()){
+			logger.info("event triggered:{}",evt);
+		}
 		if (evt instanceof ProxyEvent) {
 			ProxyEvent event = (ProxyEvent) evt;
 			if (event.type == ProxyEvent.BIND_SUCCESS) {
@@ -125,6 +130,10 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	}
 
 	private void handleConnect(ChannelHandlerContext ctx, ConnectMessage m) {
+		if (logger.isDebugEnabled()){
+			logger.debug("{} connectMessage:{}",ctx.channel(), ByteBufUtil.hexDump(m.getContent()));
+		}
+
 		if (this.targetChannelFuture == null) {
 			ReferenceCountUtil.release(m);
 			ctx.channel().writeAndFlush(new CloseMessage());
@@ -169,7 +178,6 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			return;
 		}
 		this.connectRemoteAddress(ctx, address);
-
 	}
 
 	private void handleBindV1(ChannelHandlerContext ctx, BindV1Message m) throws Exception {
@@ -185,6 +193,11 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 
 	private void connectRemoteAddress(ChannelHandlerContext ctx, SocketAddress address) throws Exception {
 		final String socketString = address.toString();
+
+		if (logger.isInfoEnabled()){
+			logger.info("{}:start bind address:{}",ctx.channel().toString(),socketString);
+		}
+
 		EventExecutor executor = ctx.executor();
 		InboundCallBackHandler callBackHandler = new InboundCallBackHandler();
 		callBackHandler.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
@@ -222,6 +235,9 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		connectToServer.addListener((ChannelFutureListener) f -> {
 			ProxyEvent event;
 			if (f.isSuccess()) {
+				if (logger.isInfoEnabled()){
+					logger.info("{} connect success",f.channel().toString());
+				}
 				event = new ProxyEvent(ProxyEvent.BIND_SUCCESS, f);
 			} else {
 				logger.error("connection:{},address:{},bind failed.{}", f.channel().toString(), socketString, f.cause() == null ? "" : LogUtil.stackTraceToString(f.cause()));
@@ -234,7 +250,16 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	@Override
 	public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
 		removeTargetChannel(true);
-		super.close(ctx, promise);
+		if (ctx.channel().isActive()){
+			ctx.channel().writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(new ChannelFutureListener() {
+				@Override
+				public void operationComplete(ChannelFuture future) throws Exception {
+					ctx.close(promise);
+				}
+			});
+		}else {
+			super.close(ctx, promise);
+		}
 	}
 
 	private boolean prepareConnect() {
@@ -304,7 +329,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 			return;
 		}
 
-		logger.info("target channel inactive." + targetChannel.toString());
+		logger.info("target channel inactive:{}" , targetChannel.toString());
 		removeTargetChannel(false);
 		ctx.writeAndFlush(new CloseMessage()).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 	}
@@ -321,6 +346,22 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		ProxyEvent(int type, ChannelFuture channelFuture) {
 			this.type = type;
 			this.channelFuture = channelFuture;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder str = new StringBuilder("ProxyEvent:");
+			if (type == BIND_SUCCESS){
+				str.append("BIND_SUCCESS");
+			}else if (type == BIND_FAILED){
+				str.append("BIND_FAILED");
+			}else if (type == TARGET_INACTIVE){
+				str.append("TARGET_INACTIVE");
+			}
+			if (channelFuture != null && channelFuture.channel() != null){
+				str.append(";").append(channelFuture.channel());
+			}
+			return str.toString();
 		}
 	}
 }
