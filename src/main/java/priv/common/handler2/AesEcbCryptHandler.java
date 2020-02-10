@@ -1,6 +1,8 @@
 package priv.common.handler2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -8,10 +10,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import priv.common.crypto.AesCrypto;
 import priv.common.crypto.AesCryptoCfbNoPadding;
+import priv.common.resource.StaticConfig;
 
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -39,6 +45,7 @@ import java.util.List;
  *  
  */
 public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
+	private static final Logger logger = LoggerFactory.getLogger(AesEcbCryptHandler.class);
 	private static final int FRAME_HEADER_LENGTH = 48;
 	private static final int DIGEST_LENGTH = 32;
 	private  static final int CONTENT_LENGTH_FIELD_LENGTH = 4;
@@ -124,6 +131,9 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 		}
 		int decryptedFrameLength = contentBytes.length - DIGEST_LENGTH;
 		this.decodeHeader = true;
+		if (logger.isDebugEnabled()){
+			logger.debug("decryptedFrameLength:{},decode result:{}",DIGEST_LENGTH, Hex.encodeHexString(contentBytes));
+		}
 		return Unpooled.buffer(decryptedFrameLength).writeBytes(contentBytes, DIGEST_LENGTH, decryptedFrameLength);
 	}
 
@@ -253,5 +263,12 @@ public class AesEcbCryptHandler extends ByteToMessageDecoder implements ChannelO
 			}
 		}
 		return true;
+	}
+
+	public static void main(String[] args)throws Exception {
+		byte[] key = Base64.decodeBase64(StaticConfig.AES_KEY);
+		AesCryptoCfbNoPadding aes = new AesCryptoCfbNoPadding(key);
+		byte[] decrypt = aes.decrypt(Hex.decodeHex("64c862e80ba9e44a13e9f4bbdd5af49b2367762b5b48b6c322618e570114e6a3b516cb66175a3be1bff5308c36448455"));
+		System.out.println(Hex.encodeHexString(decrypt));
 	}
 }

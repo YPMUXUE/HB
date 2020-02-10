@@ -3,6 +3,7 @@ package priv.Client;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -13,8 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
 import priv.common.handler.EventLoggerHandler;
+import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.log.LogUtil;
 import priv.common.resource.StaticConfig;
+import priv.common.resource.SystemConfig;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -53,17 +56,19 @@ public class ProxyClient {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
 				ChannelPipeline pipeline = ch.pipeline();
-//                pipeline.addLast(new ChannelInboundHandlerAdapter(){
-//                    @Override
-//                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-//                        logger.info(ctx.channel()+ByteBufUtil.hexDump(((ByteBuf) msg).retain()));
-//                        super.channelRead(ctx, msg);
-//                    }
-//                });
+                pipeline.addLast(new ChannelInboundHandlerAdapter(){
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    	if (logger.isDebugEnabled()) {
+		                    logger.debug("{}:{}",ctx.channel(), ByteBufUtil.hexDump(((ByteBuf) msg).retain()));
+	                    }
+                        super.channelRead(ctx, msg);
+                    }
+                });
 				pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
 				//TODO 由于message包长度字段目前设置为4 所以消息长度大于等于4会有问题
 				pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(0x7FFFFFFF));
-				pipeline.addLast("ReadTimeoutHandler",new ReadTimeoutHandler(StaticConfig.timeout, TimeUnit.SECONDS));
+				pipeline.addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(StaticConfig.timeout));
 //                pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
 				pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
 				pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient"));
@@ -75,28 +80,4 @@ public class ProxyClient {
 		});
 	}
 
-	public static class SoutChannelInboundHandler extends SimpleChannelInboundHandler {
-		@Override
-		protected void channelRead0(ChannelHandlerContext ctx, Object m) throws Exception {
-			if (m instanceof ByteBuf) {
-				ByteBuf msg=(ByteBuf)m;
-				byte[] buffer = new byte[msg.readableBytes()];
-				msg.readBytes(buffer);
-				System.out.println(new String(buffer));
-			}else{
-				System.out.println(m.toString());
-//                String content="Hello";
-//                String msgHeader="HTTP/1.1 200 OK\r\n" +
-//                        "Content-Length: "+content.getBytes("UTF-8").length+"\r\n" +
-//                        "Content-Type: text/html;charset=UTF-8\r\n" +
-//                        "\r\n";
-//                if (((FullHttpRequest) m).method().equals(HttpMethod.CONNECT)) {
-//                    ctx.writeAndFlush(Unpooled.copiedBuffer("HTTP/1.1 200 Connection Established\r\n\r\n", Charset.forName("utf-8")));
-//                }else{
-//                    ctx.writeAndFlush(Unpooled.copiedBuffer(msgHeader+content, Charset.forName("utf-8")));
-//
-//                }
-			}
-		}
-	}
 }

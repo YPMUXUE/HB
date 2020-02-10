@@ -49,6 +49,7 @@ public class ConnectionEstablishFailedTranslator implements MessageTranslator<Co
 		short reasonLength = (short) reasonBytes.length;
 		buf.writeShort(ConnectionEstablishFailedMessage.operationCode.getCode());
 		buf.writeInt(reasonLength + 2);
+		buf.writeShort(reasonLength);
 		buf.writeBytes(reasonBytes);
 		return buf;
 	}
