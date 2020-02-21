@@ -11,7 +11,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.bean.HostAndPort;
-import priv.common.events.ConnectFailedProxyEvent;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler2.AesEcbCryptHandler;
 import priv.common.handler2.ConnectProxyHandler;
@@ -20,7 +19,6 @@ import priv.common.handler2.coder.AllMessageTransferHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.frame.bind.BindV2Message;
 import priv.common.message.frame.close.CloseMessage;
-import priv.common.message.frame.connect.ConnectMessage;
 import priv.common.message.frame.establish.ConnectionEstablishFailedMessage;
 import priv.common.message.frame.establish.ConnectionEstablishMessage;
 import priv.common.resource.HttpResources;
@@ -39,7 +37,10 @@ import java.util.function.Consumer;
 public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 	private static final String callBackHandlerName = "InboundCallBackHandler";
 	public static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
-	private Channel proxyChannel;
+//	public static final AttributeKey<ChannelFuture> CONNECT_FUTURE_KEY = AttributeKey.newInstance("connectFuture");
+//	public static final AttributeKey<ChannelPromise> BIND_PROMISE_KEY = AttributeKey.newInstance("bindPromise");
+//	private Channel proxyChannel;
+	private ChannelFuture bindPromise;
 	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
 	public HttpMethodHandler() {
 	}
@@ -57,7 +58,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 				if (HttpMethod.CONNECT.equals(m.method())) {
 					handleConnectRequest(ctx, m, destination);
 				}else{
-					handleSimpleHttpRequest(ctx, m.retain(), destination);
+					commonHttpRequest(ctx, m.retain(), destination);
 				}
 			}
 		} catch (Throwable e) {
@@ -65,14 +66,12 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		} finally {
 			ReferenceCountUtil.release(msg);
 		}
-
 	}
 
-	private void handleSimpleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
-		ChannelFuture channelFuture;
+	private void commonHttpRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
+		Channel proxyChannel = Objects.isNull(this.bindPromise) ? null : this.bindPromise.channel();
 		Channel thisChannel = ctx.channel();
-		boolean isReconnect = false;
-		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
+		if (proxyChannel == null || (!proxyChannel.isActive())){
 			InboundCallBackHandler callBack = new InboundCallBackHandler();
 			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 				@Override
@@ -84,10 +83,10 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 			callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
 				@Override
 				public void accept(ChannelHandlerContext c) {
-					thisChannel.close();
+					thisChannel.writeAndFlush(new CloseMessage());
 				}
 			});
-			ChannelInitializer channelInitializer = new ChannelInitializer() {
+			ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
 				@Override
 				protected void initChannel(Channel ch) throws Exception {
 					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
@@ -101,38 +100,30 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
 				}
 			};
-			channelFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
+			ChannelFuture connectFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
+			proxyChannel = connectFuture.channel();
+			final ChannelPromise bindPromise = proxyChannel.newPromise();
 
-			this.proxyChannel = channelFuture.channel();
-			proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
-			isReconnect = true;
-		}else{
-			channelFuture = proxyChannel.newSucceededFuture();
+			final BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+			bindMessage.setPromise(bindPromise);
+			this.bindPromise = bindPromise;
+			connectFuture.addListener(new ChannelFutureListener() {
+				@Override
+				public void operationComplete(ChannelFuture future) throws Exception {
+					if (future.isSuccess()){
+						future.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
+						future.channel().writeAndFlush(bindMessage);
+					}else{
+						bindPromise.tryFailure(future.cause());
+					}
+				}
+			});
 		}
-		BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
-
-		List<Map.Entry<String, String>> entries = msg.headers().entries();
-		List<String> proxyHeaders = new ArrayList<>();
-		for (Map.Entry<String, String> s : entries) {
-			if (s.getKey().startsWith("Proxy")) {
-				proxyHeaders.add(s.getKey());
-			}
-		}
-		proxyHeaders.forEach((s)->{
-			msg.headers().remove(s);
-		});
-
-		boolean isNewAddr = !Objects.equals(destination,channelFuture.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).get());
-		boolean needToBind = isNewAddr || isReconnect;
-		channelFuture.addListener(new ChannelFutureListener() {
+		this.bindPromise.addListener(new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
-				Channel channel = future.channel();
 				if (future.isSuccess()){
-					if (needToBind) {
-						channel.write(bindMessage);
-					}
-					channel.writeAndFlush(msg);
+					future.channel().writeAndFlush(msg).addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
 				}else{
 					ReferenceCountUtil.release(msg);
 				}
@@ -140,6 +131,81 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		});
 
 	}
+//	private void handleSimpleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
+//		ChannelFuture connectFuture;
+//		Channel thisChannel = ctx.channel();
+//		boolean isReconnect = false;
+//		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
+//			InboundCallBackHandler callBack = new InboundCallBackHandler();
+//			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
+//				@Override
+//				public void accept(ChannelHandlerContext c, Object o) {
+//					thisChannel.writeAndFlush(o);
+//				}
+//			});
+//
+//			callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
+//				@Override
+//				public void accept(ChannelHandlerContext c) {
+//					thisChannel.close();
+//				}
+//			});
+//
+//			ChannelInitializer channelInitializer = new ChannelInitializer() {
+//				@Override
+//				protected void initChannel(Channel ch) throws Exception {
+//					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
+//					ChannelPipeline pipeline = ch.pipeline();
+//					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
+//					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
+//					pipeline.addLast(new AllMessageTransferHandler());
+//					pipeline.addLast(new HttpProxyMessageHandler());
+//					pipeline.addLast(new HttpRequestEncoder());
+//					pipeline.addLast(callBack);
+//					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
+//				}
+//			};
+//			connectFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
+//
+//			this.proxyChannel = connectFuture.channel();
+//			proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
+//			isReconnect = true;
+//		}else{
+//			connectFuture = proxyChannel.newSucceededFuture();
+//		}
+//		BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+//		ChannelPromise bindPromise = ctx.newPromise();
+//		bindMessage.setPromise(bindPromise);
+//
+//		List<Map.Entry<String, String>> entries = msg.headers().entries();
+//		List<String> proxyHeaders = new ArrayList<>();
+//		for (Map.Entry<String, String> s : entries) {
+//			if (s.getKey().startsWith("Proxy")) {
+//				proxyHeaders.add(s.getKey());
+//			}
+//		}
+//		proxyHeaders.forEach((s)->{
+//			msg.headers().remove(s);
+//		});
+//
+//		boolean isNewAddr = !Objects.equals(destination,connectFuture.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).get());
+//		boolean needToBind = isNewAddr || isReconnect;
+//		connectFuture.addListener(new ChannelFutureListener() {
+//			@Override
+//			public void operationComplete(ChannelFuture future) throws Exception {
+//				Channel channel = future.channel();
+//				if (future.isSuccess()){
+//					if (needToBind) {
+//						channel.write(bindMessage);
+//					}
+//					channel.writeAndFlush(msg);
+//				}else{
+//					ReferenceCountUtil.release(msg);
+//				}
+//			}
+//		});
+//
+//	}
 
 	private void handleConnectRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		final Channel clientChannel = ctx.channel();
@@ -242,6 +308,7 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 	private static class ConnectionEvent{
 		private static final int CONNECTION_ESTABLISHED = 1;
 		private static final int CONNECTION_ESTABLISH_FAILED = 2;
+		private static final int CONNECTION_SERVICE_UNAVAILABLE = 3;
 		private final int type;
 		private final Channel channel;
 

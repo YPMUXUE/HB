@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
 import priv.common.handler.EventLoggerHandler;
 import priv.common.handler.ReadWriteTimeoutHandler;
+import priv.common.handler2.coder.MessageOutboundTransferHandler;
 import priv.common.log.LogUtil;
+import priv.common.message.MessageTranslatorFactory;
 import priv.common.resource.StaticConfig;
 import priv.common.resource.SystemConfig;
 
@@ -71,6 +73,7 @@ public class ProxyClient {
 				pipeline.addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(StaticConfig.timeout));
 //                pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
 				pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
+				pipeline.addLast(new MessageOutboundTransferHandler(MessageTranslatorFactory.ALL_TRANSLATORS));
 				pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient"));
 			}
 		});
