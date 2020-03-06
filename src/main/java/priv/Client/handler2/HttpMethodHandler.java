@@ -1,10 +1,11 @@
 package priv.Client.handler2;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.*;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.binary.Base64;
@@ -16,11 +17,14 @@ import priv.common.handler2.AesEcbCryptHandler;
 import priv.common.handler2.ConnectProxyHandler;
 import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
-import priv.common.log.LogUtil;
+import priv.common.message.ChannelDataEntry;
+import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV2Message;
 import priv.common.message.frame.close.CloseMessage;
+import priv.common.message.frame.connect.ConnectMessage;
 import priv.common.message.frame.establish.ConnectionEstablishFailedMessage;
 import priv.common.message.frame.establish.ConnectionEstablishMessage;
+import priv.common.resource.ConnectionEvents;
 import priv.common.resource.HttpResources;
 import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
@@ -34,91 +38,81 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
+public class HttpMethodHandler extends ChannelDuplexHandler {
+	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
 	private static final String callBackHandlerName = "InboundCallBackHandler";
 	public static final AttributeKey<HostAndPort> HOST_AND_PORT_ATTRIBUTE_KEY = AttributeKey.newInstance("HostAndPort");
-//	public static final AttributeKey<ChannelFuture> CONNECT_FUTURE_KEY = AttributeKey.newInstance("connectFuture");
-//	public static final AttributeKey<ChannelPromise> BIND_PROMISE_KEY = AttributeKey.newInstance("bindPromise");
-//	private Channel proxyChannel;
 	private ChannelFuture bindPromise;
-	private static final Logger logger = LoggerFactory.getLogger(HttpMethodHandler.class);
+	private boolean isConnect = false;
+	private EmbeddedChannel embeddedChannel;
 	public HttpMethodHandler() {
+		this.embeddedChannel = new EmbeddedChannel(new HttpServerCodec(),new HttpObjectAggregator(0x7FFFFFFF));
 	}
 
 
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		if (logger.isDebugEnabled()) {
+			logger.debug("isConnect:{},msg:{}", this.isConnect, ByteBufUtil.hexDump((ByteBuf) msg));
+		}
+
+		if (this.isConnect){
+			sendConnectMessage(ctx,(ByteBuf)msg);
+			return;
+		}
+
+		boolean hasResult = this.embeddedChannel.writeInbound(msg);
+		if (!hasResult) {
+			return;
+		}
+
+		FullHttpRequest m = this.embeddedChannel.readInbound();
 		try {
-			if (msg instanceof FullHttpRequest) {
-				FullHttpRequest m = (FullHttpRequest) msg;
-				final HostAndPort destination = HostAndPort.resolve(m);
-				if (logger.isDebugEnabled()) {
-					logger.debug(destination.toString());
-					logger.debug(m.toString());
-				}
-				if (HttpMethod.CONNECT.equals(m.method())) {
-					handleConnectRequest(ctx, m, destination);
-				}else{
-					commonHttpRequest(ctx, m.retain(), destination);
-				}
+			if (!m.decoderResult().isSuccess()) {
+				logger.error("http decode failure", m.decoderResult().cause());
+				ctx.writeAndFlush(Unpooled.buffer().writeBytes(HttpResources.HttpResponse.HTTP_400.getBytes(StandardCharsets.UTF_8)));
+				return;
 			}
-		} catch (Throwable e) {
-			logger.error(LogUtil.stackTraceToString(e));
+
+			final HostAndPort destination = HostAndPort.resolve(m);
+			if (logger.isDebugEnabled()) {
+				logger.debug(destination.toString());
+			}
+			if (HttpMethod.CONNECT.equals(m.method())) {
+//				handleConnectRequest(ctx, m, destination);
+				throw new Exception("");
+			} else {
+				commonHttpRequest(ctx, m.retain(), destination);
+			}
 		} finally {
 			ReferenceCountUtil.release(msg);
 		}
 	}
 
+	private void sendConnectMessage(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+throw new Exception();
+	}
+
 	private void commonHttpRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		Channel proxyChannel = Objects.isNull(this.bindPromise) ? null : this.bindPromise.channel();
 		Channel thisChannel = ctx.channel();
-		if (proxyChannel == null || (!proxyChannel.isActive())){
-			InboundCallBackHandler callBack = new InboundCallBackHandler();
-			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
-				@Override
-				public void accept(ChannelHandlerContext c, Object o) {
-					thisChannel.writeAndFlush(o);
-				}
-			});
-
-			callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
-				@Override
-				public void accept(ChannelHandlerContext c) {
-					thisChannel.writeAndFlush(new CloseMessage());
-				}
-			});
-			ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
-				@Override
-				protected void initChannel(Channel ch) throws Exception {
-					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
-					ChannelPipeline pipeline = ch.pipeline();
-					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
-					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
-					pipeline.addLast(new AllMessageTransferHandler());
-					pipeline.addLast(new HttpProxyMessageHandler());
-					pipeline.addLast(new HttpRequestEncoder());
-					pipeline.addLast(callBack);
-					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
-				}
-			};
-			ChannelFuture connectFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
-			proxyChannel = connectFuture.channel();
-			final ChannelPromise bindPromise = proxyChannel.newPromise();
-
-			final BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
-			bindMessage.setPromise(bindPromise);
-			this.bindPromise = bindPromise;
-			connectFuture.addListener(new ChannelFutureListener() {
-				@Override
-				public void operationComplete(ChannelFuture future) throws Exception {
-					if (future.isSuccess()){
-						future.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
-						future.channel().writeAndFlush(bindMessage);
-					}else{
-						bindPromise.tryFailure(future.cause());
-					}
-				}
-			});
+		ChannelFuture bindFuture;
+		if (proxyChannel != null && proxyChannel.isActive()){
+			HostAndPort oldDes = proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).get();
+			if (Objects.equals(destination,oldDes)){
+				bindFuture = this.bindPromise;
+			}else{
+				Channel oldChannel = this.bindPromise.channel();
+				oldChannel.eventLoop().execute(() -> oldChannel.close());
+				bindFuture = bindRemote(ctx,destination);
+				this.bindPromise = bindFuture;
+			}
+		}else{
+			bindFuture = bindRemote(ctx,destination);
+			this.bindPromise = bindFuture;
 		}
+
+		msg.headers().remove("Proxy-Connection");
+
 		this.bindPromise.addListener(new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
@@ -131,81 +125,75 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		});
 
 	}
-//	private void handleSimpleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
-//		ChannelFuture connectFuture;
-//		Channel thisChannel = ctx.channel();
-//		boolean isReconnect = false;
-//		if (this.proxyChannel == null || (!this.proxyChannel.isActive())){
-//			InboundCallBackHandler callBack = new InboundCallBackHandler();
-//			callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
-//				@Override
-//				public void accept(ChannelHandlerContext c, Object o) {
-//					thisChannel.writeAndFlush(o);
-//				}
-//			});
-//
-//			callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
-//				@Override
-//				public void accept(ChannelHandlerContext c) {
-//					thisChannel.close();
-//				}
-//			});
-//
-//			ChannelInitializer channelInitializer = new ChannelInitializer() {
-//				@Override
-//				protected void initChannel(Channel ch) throws Exception {
-//					byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
-//					ChannelPipeline pipeline = ch.pipeline();
-//					pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
-//					pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
-//					pipeline.addLast(new AllMessageTransferHandler());
-//					pipeline.addLast(new HttpProxyMessageHandler());
-//					pipeline.addLast(new HttpRequestEncoder());
-//					pipeline.addLast(callBack);
-//					pipeline.addLast(new EventLoggerHandler("HTTP Request Proxy Channel"));
-//				}
-//			};
-//			connectFuture = Connections.connect(ctx.channel().eventLoop(), getProxyAddress(), channelInitializer);
-//
-//			this.proxyChannel = connectFuture.channel();
-//			proxyChannel.attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
-//			isReconnect = true;
-//		}else{
-//			connectFuture = proxyChannel.newSucceededFuture();
-//		}
-//		BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
-//		ChannelPromise bindPromise = ctx.newPromise();
-//		bindMessage.setPromise(bindPromise);
-//
-//		List<Map.Entry<String, String>> entries = msg.headers().entries();
-//		List<String> proxyHeaders = new ArrayList<>();
-//		for (Map.Entry<String, String> s : entries) {
-//			if (s.getKey().startsWith("Proxy")) {
-//				proxyHeaders.add(s.getKey());
-//			}
-//		}
-//		proxyHeaders.forEach((s)->{
-//			msg.headers().remove(s);
-//		});
-//
-//		boolean isNewAddr = !Objects.equals(destination,connectFuture.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).get());
-//		boolean needToBind = isNewAddr || isReconnect;
-//		connectFuture.addListener(new ChannelFutureListener() {
-//			@Override
-//			public void operationComplete(ChannelFuture future) throws Exception {
-//				Channel channel = future.channel();
-//				if (future.isSuccess()){
-//					if (needToBind) {
-//						channel.write(bindMessage);
-//					}
-//					channel.writeAndFlush(msg);
-//				}else{
-//					ReferenceCountUtil.release(msg);
-//				}
-//			}
-//		});
-//
-//	}
+
+	private ChannelFuture bindRemote(ChannelHandlerContext ctx, HostAndPort destination) throws Exception {
+		Channel thisChannel = ctx.channel();
+		ChannelPromise bindPromise = thisChannel.newPromise();
+		InboundCallBackHandler callBack = new InboundCallBackHandler();
+		callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
+			@Override
+			public void accept(ChannelHandlerContext c, Object o) {
+				if (o instanceof Message) {
+					ConnectionEvents events =((Message) o).supportConnectionEvent();
+					switch (events){
+						case CONNECTION_ESTABLISH:
+							c.channel().attr(HOST_AND_PORT_ATTRIBUTE_KEY).set(destination);
+							bindPromise.setSuccess();
+							break;
+						case CONNECTION_ESTABLISH_FAILED:
+							bindPromise.setFailure(new Exception("Establish Failed"));
+							break;
+						case CLOSE:
+							thisChannel.write(new ChannelDataEntry(c.channel(), (CloseMessage) o));
+							break;
+						case CONNECT:
+							thisChannel.write(new ChannelDataEntry(c.channel(), (ConnectMessage) o));
+						default:
+							ReferenceCountUtil.release(o);
+							throw new IllegalArgumentException("unknown message:" + o.toString());
+					}
+				}else{
+					throw new IllegalArgumentException("unknow object:" + o.toString());
+				}
+			}
+		});
+
+		callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
+			@Override
+			public void accept(ChannelHandlerContext c) {
+				thisChannel.write(new ChannelDataEntry(c.channel(),new CloseMessage()));
+			}
+		});
+
+		ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
+			@Override
+			protected void initChannel(Channel ch) throws Exception {
+				byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
+				ChannelPipeline pipeline = ch.pipeline();
+				pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
+				pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
+				pipeline.addLast(new AllMessageTransferHandler());
+//				pipeline.addLast(new HttpProxyMessageHandler());
+				pipeline.addLast(callBack);
+				pipeline.addLast(new EventLoggerHandler("Proxy Channel"));
+			}
+		};
+
+		ChannelFuture connectFuture = Connections.connect(ctx.channel().eventLoop(),getProxyAddress(),channelInitializer);
+
+		final BindV2Message bindMessage = new BindV2Message(destination.getHostString(),destination.getPort());
+		connectFuture.addListener(new ChannelFutureListener() {
+			@Override
+			public void operationComplete(ChannelFuture future) throws Exception {
+				if (future.isSuccess()){
+					future.channel().writeAndFlush(bindMessage);
+				}else{
+					bindPromise.tryFailure(future.cause());
+				}
+			}
+		});
+		return bindPromise;
+	}
 
 	private void handleConnectRequest(ChannelHandlerContext ctx, FullHttpRequest msg, HostAndPort destination) throws Exception {
 		final Channel clientChannel = ctx.channel();
@@ -256,8 +244,44 @@ public class HttpMethodHandler extends ChannelInboundHandlerAdapter {
 		});
 	}
 
-	private void checkValid(BindV2Message bindMessage) {
-
+	@Override
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+		if (msg instanceof ByteBuf){
+			ctx.write(msg,promise);
+		}else if (msg instanceof ChannelDataEntry){
+			Channel proxyChannel = ((ChannelDataEntry) msg).getBindChannel();
+			Channel thisBindChannel = this.bindPromise.channel();
+			if (!Objects.equals(proxyChannel, thisBindChannel)){
+				thisBindChannel.eventLoop().execute(new Runnable() {
+					@Override
+					public void run() {
+						thisBindChannel.close();
+					}
+				});
+				return;
+			}
+			Object data = ((ChannelDataEntry) msg).getData();
+			if (data instanceof Message){
+				ConnectionEvents event = ((Message) data).supportConnectionEvent();
+				switch (event){
+					case CLOSE:
+						ctx.channel().close();
+						ReferenceCountUtil.release(data);
+						break;
+					case CONNECT:
+						assert data instanceof ConnectMessage;
+						ByteBuf content = ((ConnectMessage) data).getContent();
+						ctx.write(content);
+						break;
+					default:
+						throw new IllegalArgumentException("unknown Message :"+data.toString());
+				}
+			}else{
+				throw new IllegalArgumentException("unknown object:"+data.toString());
+			}
+		}else{
+			throw new IllegalArgumentException("unknown object:"+msg.toString());
+		}
 	}
 
 	@Override

@@ -1,6 +1,7 @@
 package priv.common.message;
 
 import io.netty.channel.Channel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
 /**
@@ -10,59 +11,59 @@ import io.netty.util.ReferenceCounted;
  *  *
  *  
  */
-public class ChannelDataEntry<T extends ReferenceCounted> implements ReferenceCounted {
+public class ChannelDataEntry implements ReferenceCounted {
 	private final Channel bindChannel;
-	private final T data;
+	private final Object data;
 
 	public Channel getBindChannel() {
 		return bindChannel;
 	}
 
-	public T getData() {
+	public Object getData() {
 		return data;
 	}
 
-	public ChannelDataEntry(Channel bindChannel, T data) {
+	public ChannelDataEntry(Channel bindChannel, Object data) {
 		this.bindChannel = bindChannel;
 		this.data = data;
 	}
 
 	@Override
 	public int refCnt() {
-		return data.refCnt();
+		return ReferenceCountUtil.refCnt(data);
 	}
 
 	@Override
 	public ReferenceCounted retain() {
-		 data.retain();
-		 return this;
+		ReferenceCountUtil.retain(data);
+		return this;
 	}
 
 	@Override
 	public ReferenceCounted retain(int increment) {
-		data.retain(increment);
+		ReferenceCountUtil.retain(data,increment);
 		return this;
 	}
 
 	@Override
 	public ReferenceCounted touch() {
-		data.touch();
+		ReferenceCountUtil.touch(data);
 		return this;
 	}
 
 	@Override
 	public ReferenceCounted touch(Object hint) {
-		data.touch(hint);
+		ReferenceCountUtil.touch(data,hint);
 		return this;
 	}
 
 	@Override
 	public boolean release() {
-		return data.release();
+		return ReferenceCountUtil.release(data);
 	}
 
 	@Override
 	public boolean release(int decrement) {
-		return data.release(decrement);
+		return ReferenceCountUtil.release(data,decrement);
 	}
 }

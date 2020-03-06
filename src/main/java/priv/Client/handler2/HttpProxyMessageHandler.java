@@ -41,7 +41,7 @@ public class HttpProxyMessageHandler extends ChannelDuplexHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 		if (msg instanceof BindV2Message){
-			this.bindPromise = ((BindV2Message) msg).getPromise();
+//			this.bindPromise = ((BindV2Message) msg).getPromise();
 		}else if (msg instanceof ByteBuf){
 			msg = new ConnectMessage((ByteBuf) msg);
 		}

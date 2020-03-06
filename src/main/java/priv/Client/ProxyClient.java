@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.Client.handler2.HttpMethodHandler;
@@ -18,6 +19,8 @@ import priv.common.handler.ReadWriteTimeoutHandler;
 import priv.common.handler2.coder.MessageOutboundTransferHandler;
 import priv.common.log.LogUtil;
 import priv.common.message.MessageTranslatorFactory;
+import priv.common.message.frame.Message;
+import priv.common.resource.ConnectionEvents;
 import priv.common.resource.StaticConfig;
 import priv.common.resource.SystemConfig;
 
@@ -67,13 +70,12 @@ public class ProxyClient {
                         super.channelRead(ctx, msg);
                     }
                 });
-				pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
+//				pipeline.addLast("HttpRequestDecoder",new HttpRequestDecoder());
 				//TODO 由于message包长度字段目前设置为4 所以消息长度大于等于4会有问题
-				pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(0x7FFFFFFF));
+//				pipeline.addLast("HttpObjectAggregator",new HttpObjectAggregator(0x7FFFFFFF));
 				pipeline.addLast("ReadWriteTimeoutHandler",new ReadWriteTimeoutHandler(StaticConfig.timeout));
 //                pipeline.addLast("SimpleHttpProxyHandler",new SimpleHttpProxyHandler());
 				pipeline.addLast("HttpMethodHandler",new HttpMethodHandler());
-				pipeline.addLast(new MessageOutboundTransferHandler(MessageTranslatorFactory.ALL_TRANSLATORS));
 				pipeline.addLast("ExceptionHandler",new EventLoggerHandler("ProxyClient"));
 			}
 		});

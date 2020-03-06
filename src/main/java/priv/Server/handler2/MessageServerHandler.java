@@ -80,9 +80,8 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
 		if (msg instanceof ChannelDataEntry) {
-			ChannelDataEntry<? extends ReferenceCounted> m = (ChannelDataEntry<? extends ReferenceCounted>) msg;
-			Channel channel = m.getBindChannel();
-			ReferenceCounted data = m.getData();
+			Channel channel = ((ChannelDataEntry) msg).getBindChannel();
+			Object data = ((ChannelDataEntry) msg).getData();
 			if (this.targetChannelFuture != null && Objects.equals(this.targetChannelFuture.channel(), channel)) {
 				msg = new ConnectMessage((ByteBuf) data);
 			}else{
@@ -203,7 +202,7 @@ public class MessageServerHandler extends ChannelDuplexHandler {
 		callBackHandler.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
 			public void accept(ChannelHandlerContext c, Object o) {
-				ctx.channel().writeAndFlush(new ChannelDataEntry<ByteBuf>(c.channel(), (ByteBuf) o));
+				ctx.channel().writeAndFlush(new ChannelDataEntry(c.channel(), (ByteBuf) o));
 			}
 		});
 
