@@ -1,10 +1,7 @@
 package priv.common.util;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -22,5 +19,8 @@ public class Connections {
 				.channel(NioSocketChannel.class)
 				.handler(channelInitializer);
 		return bootstrap.connect(address);
+	}
+	public static ChannelFuture close(Channel channel){
+		return channel.close();
 	}
 }

@@ -10,13 +10,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface Remote<T> {
-	public enum Events{
-		OP_READ,OP_WRITE,OP_CLOSE;
+	public enum Events {
+		OP_READ, OP_WRITE, OP_CLOSE;
 	}
+
 	T get();
+
 	ChannelFuture write(T data);
+
 	boolean isOpen();
-	ChannelFuture close();
-	ChannelFuture connect(HostAndPort hostAndPort);
-	ChannelFuture connect(SocketAddress address);
 }
