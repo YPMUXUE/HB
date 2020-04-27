@@ -5,3 +5,4 @@ target/
 /log/
 /re/
 /src/test/java/priv/ignore/
+tmp.c
