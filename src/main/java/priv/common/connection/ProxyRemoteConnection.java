@@ -48,7 +48,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 	private static final ByteBufAllocator DEFAUL_ALLOC = new PooledByteBufAllocator(false);
 //	private final AtomicReference<Consumer<Events>> listener = new AtomicReference<>();
 	private final Consumer<Events> listener;
-	private ByteBuf buffer;
+	private ByteBuf outputBuffer;
 	private final int capacityFlag;
 //	private final ChannelFuture connectFuture;
 	private final EventLoop eventLoop;
@@ -57,11 +57,11 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
 	private volatile ChannelFuture connectFuture;
 
-	public ProxyRemoteConnection(EventLoop eventLoop,SocketAddress socketAddress,int capacityFlag,Consumer<Events> listener) {
+	public ProxyRemoteConnection(EventLoop eventLoop,SocketAddress remoteHostAddr,int capacityFlag,Consumer<Events> listener) {
 		this.capacityFlag = capacityFlag;
 		this.listener = Objects.requireNonNull(listener);
 		this.eventLoop = Objects.requireNonNull(eventLoop);
-		this.targetSocketAddr = Objects.requireNonNull(socketAddress);
+		this.targetSocketAddr = Objects.requireNonNull(remoteHostAddr);
 	}
 
 	private static ChannelInitializer<Channel> getDefaultChannelHandler() {
@@ -151,8 +151,8 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 	public ByteBuf get() {
 		ByteBuf result;
 		synchronized (this){
-			result = this.buffer;
-			this.buffer = null;
+			result = this.outputBuffer;
+			this.outputBuffer = null;
 		}
 		return result;
 	}
@@ -177,19 +177,18 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 
 	public void writeBuffer(ByteBuf data) {
 		synchronized (this){
-			ByteBuf cumulation  = this.buffer;
+			ByteBuf cumulation  = this.outputBuffer;
 			if (cumulation == null){
 				cumulation = data;
 			}else{
 				cumulation = MERGE_CUMULATOR.cumulate(DEFAUL_ALLOC, cumulation, data);
 			}
-			this.buffer = cumulation;
+			this.outputBuffer = cumulation;
 		}
 		listener.accept(Events.OP_READ);
 
 	}
 
-	@Override
 	public boolean isOpen() {
 		return (connectFuture != null && connectFuture.isSuccess())
 				&& (bindPromiseRef.get() != null && bindPromiseRef.get().isSuccess());
