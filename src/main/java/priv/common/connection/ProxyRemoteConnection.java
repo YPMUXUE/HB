@@ -1,10 +1,7 @@
 package priv.common.connection;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.binary.Base64;
 import priv.Client.bean.HostAndPort;
@@ -12,7 +9,6 @@ import priv.common.handler.EventLoggerHandler;
 import priv.common.handler2.AesEcbCryptHandler;
 import priv.common.handler2.InboundCallBackHandler;
 import priv.common.handler2.coder.AllMessageTransferHandler;
-import priv.common.message.ChannelDataEntry;
 import priv.common.message.frame.Message;
 import priv.common.message.frame.bind.BindV2Message;
 import priv.common.message.frame.close.CloseMessage;
@@ -25,9 +21,6 @@ import priv.common.util.Connections;
 import priv.common.util.HandlerHelper;
 
 import java.net.SocketAddress;
-import java.util.ConcurrentModificationException;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,23 +34,26 @@ import java.util.function.Consumer;
  *  *
  *  
  */
-public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<Message> {
-	public static final ByteToMessageDecoder.Cumulator MERGE_CUMULATOR = ByteToMessageDecoder.MERGE_CUMULATOR;
-	public static final ByteToMessageDecoder.Cumulator COMPOSITE_CUMULATOR = ByteToMessageDecoder.COMPOSITE_CUMULATOR;
+public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler<Message> {
+	public static final int STATUS_INIT = 0;
 
-	private static final ByteBufAllocator DEFAUL_ALLOC = new PooledByteBufAllocator(false);
-//	private final AtomicReference<Consumer<Events>> listener = new AtomicReference<>();
+	public static final int STATUS_READABLE = 1;
+
+	public static final int STATUS_CLOSE = 1 << 1;
+
+	public static final int STATUS_CLOSE = 1 << 2;
+
+	private final ByteBufCache outputCache = new ByteBufCache();
 	private final Consumer<Events> listener;
-	private ByteBuf outputBuffer;
 	private final int capacityFlag;
-//	private final ChannelFuture connectFuture;
 	private final EventLoop eventLoop;
 	private final SocketAddress targetSocketAddr;
 	//should not set a new value after being set a object from null
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
+	private final AtomicInteger statusMask = new AtomicInteger(0);
 	private volatile ChannelFuture connectFuture;
 
-	public ProxyRemoteConnection(EventLoop eventLoop,SocketAddress remoteHostAddr,int capacityFlag,Consumer<Events> listener) {
+	public ProxyRemoteConnection(EventLoop eventLoop, SocketAddress remoteHostAddr, int capacityFlag, Consumer<Events> listener) {
 		this.capacityFlag = capacityFlag;
 		this.listener = Objects.requireNonNull(listener);
 		this.eventLoop = Objects.requireNonNull(eventLoop);
@@ -73,14 +69,14 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 		};
 	}
 
-	private static ChannelInitializer<Channel> getProxyChannelInitializer(final RemoteDataHandler<Message> dataHandler){
+	private static ChannelInitializer<Channel> getProxyChannelInitializer(final RemoteDataHandler<Message> dataHandler) {
 		InboundCallBackHandler callBack = new InboundCallBackHandler();
 		callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
 			public void accept(ChannelHandlerContext c, Object o) {
 				if (o instanceof Message) {
 					dataHandler.receiveData((Message) o);
-				}else{
+				} else {
 					throw new IllegalArgumentException("unknow object:" + o.toString());
 				}
 			}
@@ -98,7 +94,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 			protected void initChannel(Channel ch) throws Exception {
 				byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
 				ChannelPipeline pipeline = ch.pipeline();
-				pipeline.addLast("AESHandler",new AesEcbCryptHandler(aesKey));
+				pipeline.addLast("AESHandler", new AesEcbCryptHandler(aesKey));
 				pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
 				pipeline.addLast(new AllMessageTransferHandler());
 //				pipeline.addLast(new HttpProxyMessageHandler());
@@ -107,6 +103,15 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 			}
 		};
 		return channelInitializer;
+	}
+
+	public static Consumer<Events> newDefaultListener(final Channel notifyChannel) {
+		return new Consumer<Events>() {
+			@Override
+			public void accept(Events events) {
+				notifyChannel.pipeline().fireUserEventTriggered(events);
+			}
+		};
 	}
 
 	public ChannelFuture bind(HostAndPort hostAndPort) {
@@ -130,7 +135,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 					future.channel().writeAndFlush(initMessage).addListener(new ChannelFutureListener() {
 						@Override
 						public void operationComplete(ChannelFuture future) throws Exception {
-							if (!future.isSuccess()){
+							if (!future.isSuccess()) {
 								bindPromise.tryFailure(future.cause());
 							}
 						}
@@ -140,17 +145,17 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 				}
 			}
 		});
-		return (ChannelFuture) bindPromise;
+		return bindPromise;
 	}
 
 	private Message bindMessage(HostAndPort hostAndPort) {
-		return new BindV2Message(hostAndPort.getHostString(),hostAndPort.getPort());
+		return new BindV2Message(hostAndPort.getHostString(), hostAndPort.getPort());
 	}
 
 	@Override
 	public ByteBuf get() {
 		ByteBuf result;
-		synchronized (this){
+		synchronized (this) {
 			result = this.outputBuffer;
 			this.outputBuffer = null;
 		}
@@ -160,7 +165,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 	@Override
 	public ChannelFuture write(ByteBuf data) {
 		ChannelPromise bindPromise = this.bindPromiseRef.get();
-		if (bindPromise == null){
+		if (bindPromise == null) {
 			ReferenceCountUtil.release(data);
 			throw new NullPointerException("the bind channel is null");
 		}
@@ -169,22 +174,17 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 		bindPromise.addListener(new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
-				future.channel().writeAndFlush(connectMessage,writePromise);
+				future.channel().writeAndFlush(connectMessage, writePromise);
 			}
 		});
 		return writePromise;
 	}
 
 	public void writeBuffer(ByteBuf data) {
-		synchronized (this){
-			ByteBuf cumulation  = this.outputBuffer;
-			if (cumulation == null){
-				cumulation = data;
-			}else{
-				cumulation = MERGE_CUMULATOR.cumulate(DEFAUL_ALLOC, cumulation, data);
-			}
-			this.outputBuffer = cumulation;
+		if (data == null) {
+			return;
 		}
+		this.outputCache.writeBuffer(data);
 		listener.accept(Events.OP_READ);
 
 	}
@@ -199,37 +199,28 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>,RemoteDataHandler<
 		return null;
 	}
 
-
 	@Override
 	public void receiveData(Message data) {
 		ConnectionEvents events = data.supportConnectionEvent();
-		switch (events){
+		switch (events) {
 			case CONNECT:
-				this.writeBuffer(((ConnectMessage)data).getContent());
+				this.writeBuffer(((ConnectMessage) data).getContent());
 				break;
 			case CLOSE:
-				this.onReceiveCloseMessage((CloseMessage)data);
+				this.onReceiveCloseMessage((CloseMessage) data);
 				break;
 			case CONNECTION_ESTABLISH_FAILED:
-				this.onReceiveConnectionEstablishFailed((ConnectionEstablishFailedMessage)data);
+				this.onReceiveConnectionEstablishFailed((ConnectionEstablishFailedMessage) data);
 				break;
 			case CONNECTION_ESTABLISH:
-				this.onReceiveConnectionEstablish((ConnectionEstablishMessage)data);
+				this.onReceiveConnectionEstablish((ConnectionEstablishMessage) data);
 				break;
 			default:
-				throw new IllegalArgumentException("unknown events"+data.toString());
+				throw new IllegalArgumentException("unknown events" + data.toString());
 		}
 	}
 
 	private void onReceiveConnectionEstablish(ConnectionEstablishMessage data) {
 		this.bindFuture.setSuccess();
 	}
-	public static Consumer<Events> newDefaultListener(final Channel notifyChannel){
-		return new Consumer<Events>() {
-			@Override
-			public void accept(Events events) {
-				notifyChannel.pipeline().fireUserEventTriggered(events);
-			}
-		};
-	}
-	}
+}
