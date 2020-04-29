@@ -1,8 +1,9 @@
 package priv.common.connection;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.codec.binary.Base64;
 import priv.Client.bean.HostAndPort;
@@ -55,29 +56,41 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
 	private final AtomicInteger statusMask = new AtomicInteger(0);
 
-//	private volatile ChannelFuture connectFuture;
 
-	public ProxyRemoteConnection(ChannelFuture connectFuture, int capacityFlag, Consumer<Events> listener) {
+	private ProxyRemoteConnection(ChannelFuture connectFuture, int capacityFlag, Consumer<Events> listener) {
 		this.capacityFlag = capacityFlag;
 		this.listener = Objects.requireNonNull(listener);
 		this.connectFuture = connectFuture;
 	}
 
-	public static ChannelInitializer<Channel> getPreCacheHandler() {
-		return new ChannelInitializer<Channel>() {
+	public static ProxyRemoteConnection build(EventLoop eventLoop, SocketAddress targetSocketAddr, int capacityFlag, Consumer<Events> listener){
+		
+		ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
-				ch.pipeline().addFirst(new ChannelInboundHandlerAdapter(){
-					@Override
-					public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-						super.channelRead(ctx, msg);
-					}
-				})
+				byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
+				ChannelPipeline pipeline = ch.pipeline();
+				pipeline.addLast("AESHandler", new AesEcbCryptHandler(aesKey));
+				pipeline.addLast("LengthFieldBasedFrameDecoder",HandlerHelper.newDefaultFrameDecoderInstance());
+				pipeline.addLast("MessageTransferHandler",new AllMessageTransferHandler());
+//				pipeline.addLast(new HttpProxyMessageHandler());
+				pipeline.addLast(replaceChannelHandlerFlag);
+				pipeline.addLast(new EventLoggerHandler("Proxy remote channel"));
 			}
 		};
+		
+		Bootstrap bootstrap = new Bootstrap();
+		bootstrap.group(Objects.requireNonNull(eventLoop))
+				.channel(NioSocketChannel.class)
+				.handler(channelInitializer)
+				.option(ChannelOption.AUTO_READ,false);
+		ChannelFuture connectFuture = bootstrap.connect(targetSocketAddr);
+
+		return new ProxyRemoteConnection(connectFuture,capacityFlag,listener);
+		
 	}
 
-	private static ChannelInitializer<Channel> getProxyChannelInitializer(final RemoteDataHandler<Message> dataHandler) {
+	private static ChannelFuture HandleReplaceFlag(ChannelFuture connectFuture, RemoteDataHandler<Message> dataHandler) {
 		InboundCallBackHandler callBack = new InboundCallBackHandler();
 		callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
 			@Override
@@ -97,36 +110,18 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			}
 		});
 
-		ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
-			@Override
-			protected void initChannel(Channel ch) throws Exception {
-				byte[] aesKey = Base64.decodeBase64(StaticConfig.AES_KEY);
-				ChannelPipeline pipeline = ch.pipeline();
-				pipeline.addLast("AESHandler", new AesEcbCryptHandler(aesKey));
-				pipeline.addLast(HandlerHelper.newDefaultFrameDecoderInstance());
-				pipeline.addLast(new AllMessageTransferHandler());
-//				pipeline.addLast(new HttpProxyMessageHandler());
-				pipeline.addLast(callBack);
-				pipeline.addLast(new EventLoggerHandler("Proxy remote channel"));
-			}
-		};
-		return channelInitializer;
+		Channel channel = connectFuture.channel();
+		channel.pipeline().replace(replaceChannelHandlerFlag,"callBackHandler",callBack);
+		channel.config().setAutoRead(true);
+		return connectFuture;
 	}
 
-	public static Consumer<Events> newDefaultListener(final Channel notifyChannel) {
-		return new Consumer<Events>() {
-			@Override
-			public void accept(Events events) {
-				notifyChannel.pipeline().fireUserEventTriggered(events);
-			}
-		};
-	}
 
 	public ChannelFuture bind(HostAndPort hostAndPort) {
 		if (this.bindPromiseRef.get() != null) {
 			throw new IllegalStateException("the bind is modify by others");
 		}
-		ChannelFuture connectFuture = Connections.connect(this.eventLoop, this.targetSocketAddr, getProxyChannelInitializer(this));
+		ChannelFuture connectFuture = HandleReplaceFlag(this.connectFuture,this);
 		ChannelPromise bindPromise = connectFuture.channel().newPromise();
 		boolean result = this.bindPromiseRef.compareAndSet(null, bindPromise);
 		if (!result) {
@@ -167,9 +162,9 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	@Override
 	public ByteBuf get() {
 		ByteBuf result;
-		synchronized (this) {
-			result = this.outputBuffer;
-			this.outputBuffer = null;
+		ByteBufCache outputCache = this.outputCache;
+		synchronized (outputCache) {
+			result = outputCache.get();
 		}
 		return result;
 	}
@@ -238,4 +233,25 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private void onReceiveConnectionEstablish(ConnectionEstablishMessage data) {
 		this.bindFuture.setSuccess();
 	}
+	
+	
+	private static final ChannelHandler replaceChannelHandlerFlag = new ReplaceChannelHandlerFlag();
+	
+	@ChannelHandler.Sharable
+	private static class ReplaceChannelHandlerFlag extends ChannelInboundHandlerAdapter {
+		@Override
+		public boolean isSharable() {
+			return true;
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+			throw new UnsupportedOperationException("should not fire events while this handler is in the pipeline");
+		}
+
+		@Override
+		public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+			throw new UnsupportedOperationException("should not fire events while this handler is in the pipeline");
+		}
+	};
 }
