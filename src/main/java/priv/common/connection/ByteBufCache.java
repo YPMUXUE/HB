@@ -2,6 +2,7 @@ package priv.common.connection;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
@@ -31,6 +32,9 @@ public class ByteBufCache {
 		ByteBuf result;
 			result = this.outputBuffer;
 			this.outputBuffer = null;
+			if (result == null){
+				result = new EmptyByteBuf(allocator);
+			}
 		return result;
 	}
 
