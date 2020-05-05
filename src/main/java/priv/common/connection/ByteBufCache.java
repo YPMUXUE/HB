@@ -1,10 +1,8 @@
 package priv.common.connection;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.*;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  *  * @author  pyuan
@@ -54,10 +52,10 @@ public class ByteBufCache {
 			i = outputBuffer == null ? 0 : outputBuffer.readableBytes();
 		return i;
 	}
-	public ByteBuf clear(){
+	public void clear(){
 		ByteBuf byteBuf;
 			byteBuf = this.outputBuffer;
 			this.outputBuffer = null;
-		return byteBuf;
+		ReferenceCountUtil.release(byteBuf);
 	}
 }

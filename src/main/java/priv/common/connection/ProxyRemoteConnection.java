@@ -2,8 +2,6 @@ package priv.common.connection;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.EmptyByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -26,10 +24,8 @@ import priv.common.util.HandlerHelper;
 
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -45,7 +41,9 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 
 	public static final int STATUS_CONNECT = 1;
 
-	public static final int STATUS_BIND = 1<<1;
+	public static final int STATUS_BIND = 2;
+
+	public static final int STATUS_CLOSE = 3;
 
 	private static final ChannelHandler replaceChannelHandlerFlag = new ReplaceChannelHandlerFlag();
 
@@ -54,11 +52,8 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private final Consumer<Events> listener;
 	private final int capacityFlag;
 	private final ChannelFuture connectFuture;
-	//should not set a new value after being set a object from null
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
-	private final AtomicInteger statusMask = new AtomicInteger(STATUS_INIT);
-
-	private volatile boolean notifyRead = false;
+	private final AtomicInteger status = new AtomicInteger(STATUS_INIT);
 
 	private ProxyRemoteConnection(ChannelFuture connectFuture, int capacityFlag, Consumer<Events> listener) {
 		this.capacityFlag = capacityFlag;
@@ -110,6 +105,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			@Override
 			public void accept(ChannelHandlerContext c) {
 				dataHandler.receiveData(new CloseMessage());
+				c.fireChannelInactive();
 			}
 		});
 
@@ -135,7 +131,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
 				if (future.isSuccess()) {
-					boolean result = statusMask.compareAndSet(STATUS_INIT, STATUS_CONNECT);
+					boolean result = status.compareAndSet(STATUS_INIT, STATUS_CONNECT);
 					if (!result) {
 						IllegalStateException e = new IllegalStateException("the channel connect scccess but status is not in 'init'");
 						bindPromise.setFailure(e);
@@ -164,11 +160,8 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	@Override
 	public ByteBuf get() {
 		ByteBuf result;
-		synchronized (outputCache) {
+		synchronized (this) {
 			result = outputCache.get();
-			if (outputCache.size() == 0){
-				needNotify = false;
-			}
 		}
 		return result;
 	}
@@ -180,15 +173,17 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			ReferenceCountUtil.release(data);
 			throw new NullPointerException("the bind channel is null");
 		}
-		ChannelPromise writePromise = bindPromise.channel().newPromise();
+		boolean bindSuccess = bindPromise.isSuccess();
+		if (!bindSuccess){
+			throw new RuntimeException("the bind is not complete or failed");
+		}
+		Channel targetChannel = bindPromise.channel();
 		Message connectMessage = new ConnectMessage(data);
-		bindPromise.addListener(new ChannelFutureListener() {
-			@Override
-			public void operationComplete(ChannelFuture future) throws Exception {
-				future.channel().writeAndFlush(connectMessage, writePromise);
-			}
-		});
+		ChannelPromise writePromise = targetChannel.newPromise();
+		targetChannel.writeAndFlush(connectMessage,writePromise);
+
 		return writePromise;
+
 	}
 
 	public void addBufferCache(ByteBuf data) {
@@ -196,20 +191,30 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			ReferenceCountUtil.release(data);
 			return;
 		}
-		this.outputCache.writeBuffer(data);
-
+		synchronized (this) {
+			outputCache.writeBuffer(data);
+		}
 	}
 
 	public boolean isClose() {
-		return (this.statusMask.get() & STATUS_CLOSE) != 0;
+		return this.status.get() == STATUS_CLOSE;
 	}
 
 	public ChannelFuture close() {
-		ChannelPromise bindPromise = this.bindPromiseRef.get();
-		if (bindPromise == null) {
-			return null;
-		}
-		return null;
+		disableListener();
+		Channel targetChannel = connectFuture.channel();
+		ChannelPromise closePromise = targetChannel.newPromise();
+		targetChannel.close();
+		closePromise.addListener(new ChannelFutureListener() {
+			@Override
+			public void operationComplete(ChannelFuture future) throws Exception {
+				ProxyRemoteConnection.this.status.set(STATUS_CLOSE);
+				synchronized (ProxyRemoteConnection.this){
+					outputCache.clear();
+				}
+			}
+		});
+		return closePromise;
 	}
 
 	@Override
