@@ -62,7 +62,6 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	}
 
 	public static ProxyRemoteConnection build(EventLoop eventLoop, SocketAddress targetSocketAddr, int capacityFlag, Consumer<Events> listener) {
-
 		ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
 			@Override
 			protected void initChannel(Channel ch) throws Exception {
@@ -135,7 +134,8 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 					if (!result) {
 						IllegalStateException e = new IllegalStateException("the channel connect scccess but status is not in 'init'");
 						bindPromise.setFailure(e);
-						throw e;
+						future.channel().pipeline().fireExceptionCaught(e);
+						return;
 					}
 					future.channel().writeAndFlush(initMessage).addListener(new ChannelFutureListener() {
 						@Override
@@ -201,19 +201,14 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	}
 
 	public ChannelFuture close() {
+		status.set(STATUS_CLOSE);
 		disableListener();
 		Channel targetChannel = connectFuture.channel();
 		ChannelPromise closePromise = targetChannel.newPromise();
-		targetChannel.close();
-		closePromise.addListener(new ChannelFutureListener() {
-			@Override
-			public void operationComplete(ChannelFuture future) throws Exception {
-				ProxyRemoteConnection.this.status.set(STATUS_CLOSE);
-				synchronized (ProxyRemoteConnection.this){
-					outputCache.clear();
-				}
-			}
-		});
+		targetChannel.close(closePromise);
+		synchronized (this){
+			outputCache.clear();
+		}
 		return closePromise;
 	}
 
@@ -244,6 +239,9 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 
 	private void onReceiveCloseMessage(CloseMessage data) {
 
+	}
+	public EventLoop eventLoop(){
+		return connectFuture.channel().eventLoop();
 	}
 
 	private void onReceiveConnectionEstablish(ConnectionEstablishMessage data) {
