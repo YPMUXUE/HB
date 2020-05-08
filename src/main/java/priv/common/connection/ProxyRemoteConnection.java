@@ -52,6 +52,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private final Consumer<Events> listener;
 	private final int capacityFlag;
 	private final ChannelFuture connectFuture;
+	private final ChannelFuture closeFuture;
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
 	private final AtomicInteger status = new AtomicInteger(STATUS_INIT);
 
@@ -59,6 +60,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 		this.capacityFlag = capacityFlag;
 		this.listener = Objects.requireNonNull(listener);
 		this.connectFuture = connectFuture;
+		this.closeFuture = this.connectFuture.channel().newPromise();
 	}
 
 	public static ProxyRemoteConnection build(EventLoop eventLoop, SocketAddress targetSocketAddr, int capacityFlag, Consumer<Events> listener) {
@@ -174,13 +176,13 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 			throw new NullPointerException("the bind channel is null");
 		}
 		boolean bindSuccess = bindPromise.isSuccess();
-		if (!bindSuccess){
+		if (!bindSuccess) {
 			throw new RuntimeException("the bind is not complete or failed");
 		}
 		Channel targetChannel = bindPromise.channel();
 		Message connectMessage = new ConnectMessage(data);
 		ChannelPromise writePromise = targetChannel.newPromise();
-		targetChannel.writeAndFlush(connectMessage,writePromise);
+		targetChannel.writeAndFlush(connectMessage, writePromise);
 
 		return writePromise;
 
@@ -205,8 +207,8 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 		disableListener();
 		Channel targetChannel = connectFuture.channel();
 		ChannelPromise closePromise = targetChannel.newPromise();
-		targetChannel.close(closePromise);
-		synchronized (this){
+		Connections.close(targetChannel);
+		synchronized (this) {
 			outputCache.clear();
 		}
 		return closePromise;
@@ -240,8 +242,13 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private void onReceiveCloseMessage(CloseMessage data) {
 
 	}
-	public EventLoop eventLoop(){
+
+	public EventLoop eventLoop() {
 		return connectFuture.channel().eventLoop();
+	}
+
+	private void invokeLater(Runnable r) {
+		eventLoop().execute(r);
 	}
 
 	private void onReceiveConnectionEstablish(ConnectionEstablishMessage data) {

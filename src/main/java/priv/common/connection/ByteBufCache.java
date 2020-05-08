@@ -1,6 +1,9 @@
 package priv.common.connection;
 
-import io.netty.buffer.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 
@@ -20,6 +23,7 @@ public class ByteBufCache {
 	private ByteBuf outputBuffer;
 	private final ByteToMessageDecoder.Cumulator cumulator;
 	private final ByteBufAllocator allocator;
+	private boolean close;
 
 	public ByteBufCache(){
 		this.cumulator = MERGE_CUMULATOR;
@@ -37,6 +41,10 @@ public class ByteBufCache {
 	}
 
 	public void writeBuffer(ByteBuf data) {
+		if (isClose()){
+			ReferenceCountUtil.release(data);
+			return;
+		}
 			ByteBuf cumulation  = this.outputBuffer;
 			if (cumulation == null){
 				cumulation = data;
@@ -57,5 +65,14 @@ public class ByteBufCache {
 			byteBuf = this.outputBuffer;
 			this.outputBuffer = null;
 		ReferenceCountUtil.release(byteBuf);
+	}
+	public boolean isClose(){
+		return close;
+	}
+	public void close(boolean clearBuffer){
+		this.close = true;
+		if (clearBuffer){
+			this.clear();
+		}
 	}
 }
