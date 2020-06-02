@@ -22,7 +22,9 @@ import priv.common.resource.StaticConfig;
 import priv.common.util.Connections;
 import priv.common.util.HandlerHelper;
 
+import javax.activation.DataHandler;
 import java.net.SocketAddress;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,7 +38,7 @@ import java.util.function.Consumer;
  *  *
  *  
  */
-public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler<Message> {
+public class ProxyRemoteConnection implements Remote<ByteBuf>{
 	public static final int STATUS_INIT = 0;
 
 	public static final int STATUS_CONNECT = 1;
@@ -55,12 +57,14 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 	private final ChannelFuture closeFuture;
 	private final AtomicReference<ChannelPromise> bindPromiseRef = new AtomicReference<>(null);
 	private final AtomicInteger status = new AtomicInteger(STATUS_INIT);
+	private final ChannelResourceFactory channelResourceFactory;
 
-	private ProxyRemoteConnection(ChannelFuture connectFuture, int capacityFlag, Consumer<Events> listener) {
+	private ProxyRemoteConnection(ChannelResourceFactory channelResourceFactory, ChannelFuture connectFuture, int capacityFlag, Consumer<Events> listener) {
 		this.capacityFlag = capacityFlag;
 		this.listener = Objects.requireNonNull(listener);
 		this.connectFuture = connectFuture;
 		this.closeFuture = this.connectFuture.channel().newPromise();
+		this.channelResourceFactory = channelResourceFactory;
 	}
 
 	public static ProxyRemoteConnection build(EventLoop eventLoop, SocketAddress targetSocketAddr, int capacityFlag, Consumer<Events> listener) {
@@ -77,41 +81,21 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 				pipeline.addLast(new EventLoggerHandler("Proxy remote channel"));
 			}
 		};
+		
+		HashMap<ChannelOption,Object> options = new HashMap<>();
+		options.put(ChannelOption.AUTO_READ,false);
+		ChannelResourceFactory channelResourceFactory = new DefaultChannelResourceFactory(options);
+		ChannelFuture connectFuture = channelResourceFactory.connect(eventLoop, targetSocketAddr, channelInitializer);
 
-		Bootstrap bootstrap = new Bootstrap();
-		bootstrap.group(Objects.requireNonNull(eventLoop))
-				.channel(NioSocketChannel.class)
-				.handler(channelInitializer)
-				.option(ChannelOption.AUTO_READ, false);
-		ChannelFuture connectFuture = bootstrap.connect(targetSocketAddr);
-
-		return new ProxyRemoteConnection(connectFuture, capacityFlag, listener);
+		return new ProxyRemoteConnection(channelResourceFactory,connectFuture, capacityFlag, listener);
 
 	}
 
 	private static ChannelFuture HandleReplaceFlag(ChannelFuture connectFuture, RemoteDataHandler<Message> dataHandler) {
-		InboundCallBackHandler callBack = new InboundCallBackHandler();
-		callBack.setChannelReadListener(new BiConsumer<ChannelHandlerContext, Object>() {
-			@Override
-			public void accept(ChannelHandlerContext c, Object o) {
-				if (o instanceof Message) {
-					dataHandler.receiveData((Message) o);
-				} else {
-					throw new IllegalArgumentException("unknow object:" + o.toString());
-				}
-			}
-		});
-
-		callBack.setChannelInactiveListener(new Consumer<ChannelHandlerContext>() {
-			@Override
-			public void accept(ChannelHandlerContext c) {
-				dataHandler.receiveData(new CloseMessage());
-				c.fireChannelInactive();
-			}
-		});
+		TargetProxyChannelHandler handler = new TargetProxyChannelHandler(dataHandler);
 
 		Channel channel = connectFuture.channel();
-		channel.pipeline().replace(replaceChannelHandlerFlag, "callBackHandler", callBack);
+		channel.pipeline().replace(replaceChannelHandlerFlag, "callBackHandler", handler);
 		channel.config().setAutoRead(true);
 		return connectFuture;
 	}
@@ -124,7 +108,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 		ChannelPromise bindPromise = connectFuture.channel().newPromise();
 		boolean result = this.bindPromiseRef.compareAndSet(null, bindPromise);
 		if (!result) {
-			Connections.close(connectFuture.channel());
+			channelResourceFactory.close(connectFuture.channel());
 			throw new IllegalStateException("the bind is modify by others");
 		}
 		Message initMessage = bindMessage(hostAndPort);
@@ -188,30 +172,21 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 
 	}
 
-	public void addBufferCache(ByteBuf data) {
-		if (isClose() || data == null || data.readableBytes() <= 0) {
-			ReferenceCountUtil.release(data);
-			return;
-		}
+	public ChannelFuture close() {
+		status.set(STATUS_CLOSE);
+		Channel targetChannel = connectFuture.channel();
+		ChannelPromise closePromise = targetChannel.newPromise();
+		channelResourceFactory.close(targetChannel,closePromise);
+
 		synchronized (this) {
-			outputCache.writeBuffer(data);
+			outputCache.close(true);
 		}
+
+		return closePromise;
 	}
 
 	public boolean isClose() {
 		return this.status.get() == STATUS_CLOSE;
-	}
-
-	public ChannelFuture close() {
-		status.set(STATUS_CLOSE);
-		disableListener();
-		Channel targetChannel = connectFuture.channel();
-		ChannelPromise closePromise = targetChannel.newPromise();
-		Connections.close(targetChannel);
-		synchronized (this) {
-			outputCache.clear();
-		}
-		return closePromise;
 	}
 
 	@Override
@@ -232,6 +207,16 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 				break;
 			default:
 				throw new IllegalArgumentException("unknown events" + data.toString());
+		}
+	}
+
+	private void addBufferCache(ByteBuf data) {
+		if (isClose() || data == null || data.readableBytes() <= 0) {
+			ReferenceCountUtil.release(data);
+			return;
+		}
+		synchronized (this) {
+			outputCache.writeBuffer(data);
 		}
 	}
 
@@ -270,6 +255,29 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>, RemoteDataHandler
 		@Override
 		public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
 			throw new UnsupportedOperationException("should not fire events while this handler is in the pipeline");
+		}
+	}
+
+	private static class TargetProxyChannelHandler extends ChannelDuplexHandler{
+		private final RemoteDataHandler<Message> dataHandler;
+
+		public TargetProxyChannelHandler(RemoteDataHandler<Message> dataHandler) {
+			this.dataHandler = dataHandler;
+		}
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object o) throws Exception {
+			if (o instanceof Message) {
+				dataHandler.receiveData((Message) o);
+			} else {
+				throw new IllegalArgumentException("unknow object:" + o.toString());
+			}
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext c) throws Exception {
+			dataHandler.receiveData(new CloseMessage());
+			c.fireChannelInactive();
 		}
 	}
 }
