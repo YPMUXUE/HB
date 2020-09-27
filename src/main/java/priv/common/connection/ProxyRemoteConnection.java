@@ -105,7 +105,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>{
 			throw new IllegalStateException("the bind is modify by others");
 		}
 		ChannelFuture connectFuture = HandleReplaceFlag(this.connectFuture, this);
-		ChannelPromise bindPromise = connectFuture.channel().newPromise();
+		final ChannelPromise bindPromise = connectFuture.channel().newPromise();
 		boolean result = this.bindPromiseRef.compareAndSet(null, bindPromise);
 		if (!result) {
 			channelResourceFactory.close(connectFuture.channel());
@@ -120,7 +120,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>{
 					if (!result) {
 						IllegalStateException e = new IllegalStateException("the channel connect scccess but status is not in 'init'");
 						bindPromise.setFailure(e);
-						future.channel().pipeline().fireExceptionCaught(e);
+//						future.channel().pipeline().fireExceptionCaught(e);
 						return;
 					}
 					future.channel().writeAndFlush(initMessage).addListener(new ChannelFutureListener() {
@@ -189,7 +189,7 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>{
 		return this.status.get() == STATUS_CLOSE;
 	}
 
-	@Override
+
 	public void receiveData(Message data) {
 		ConnectionEvents events = data.supportConnectionEvent();
 		switch (events) {
@@ -226,14 +226,6 @@ public class ProxyRemoteConnection implements Remote<ByteBuf>{
 
 	private void onReceiveCloseMessage(CloseMessage data) {
 
-	}
-
-	public EventLoop eventLoop() {
-		return connectFuture.channel().eventLoop();
-	}
-
-	private void invokeLater(Runnable r) {
-		eventLoop().execute(r);
 	}
 
 	private void onReceiveConnectionEstablish(ConnectionEstablishMessage data) {
